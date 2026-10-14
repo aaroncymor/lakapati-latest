@@ -8,6 +8,10 @@ from .models import WaterConsumptionRecord
 def get_group_latest_waterbilling(
     request, tenant_group_id, *args, **kwargs
 ):
+    """
+    Gets latest recorded water consumption record for reference to
+    next billing.
+    """
     water_consumptions = WaterConsumptionRecord.objects.filter(
         tenant_group__id=tenant_group_id
     ).order_by("-created_at")[:1]
