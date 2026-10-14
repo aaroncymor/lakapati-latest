@@ -1,0 +1,41 @@
+{% load django_htmx %}
+{% load tailwind_tags %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Django & HTMX SSE Example</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="" />
+  {% htmx_script %}
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  {% tailwind_css %}
+  <!--<link rel="icon" href="favicon.png">-->
+  {% block xtra_head %}{% endblock%}
+</head>
+
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <main>
+    <!-- Navigation -->
+    <nav class="m-0 p-4 overflow-hidden bg-gray-800 flex flex-row justify-end cursor-pointer">
+      {% if user and user.is_authenticated %}
+      <div class="logout">
+          <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button class="cursor-pointer" type="submit">Logout</button>
+          </form>
+      </div>
+      {% endif %}
+    </nav>
+
+    <!-- Main Content -->
+    {% block content %}
+    {% endblock %}
+  </main>
+
+  {% block xtra_script %}{% endblock%}
+</body>
+
+</html>

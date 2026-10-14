@@ -1,0 +1,46 @@
+<div class="table-container">
+  <table id="tenantGroupTable" class="table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Group Name</th>
+        <th>Primary Contact</th>
+        <th>Property & Space</th>
+        <th>Tenants</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if tenant_groups %}
+      {% for group in tenant_groups %}
+      <tr>
+        <th>{{ forloop.counter }}</th>
+        <td>{{ group.name }}</td>
+        <td>{{ group.primary.first_name }}&nbsp;{{ group.primary.last_name }}</td>
+        <td>{{ group.space.property.name }}&nbsp;|&nbsp;{{ group.space.name }}</td>
+        <td>{{ group.tenants.count }}</td>
+        <td>
+          <button class="bg-blue-500 p-2 mb-2 cursor-pointer" @click="alert('wow');">
+            View Billing History
+          </button>
+          <button class="bg-green-500 p-2 cursor-pointer" hx-get="{% url 'latest_waterbilling' group.id %}"
+            hx-target="#waterBillingFormModal" hx-swap="outerHTML">
+            Add Water Billing
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+      {% else %}
+      <tr>
+        <th></th>
+        <td colspan="5" class="text-center">
+          <div class="my-5">
+            <span class="text-white text-lg">No tenant group records...</span>
+          </div>
+        </td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+  {% include 'properties/partials/water_billing_modal.html' %}
+</div>

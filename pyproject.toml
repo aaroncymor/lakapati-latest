@@ -1,0 +1,22 @@
+[tool.mypy]
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
+
+[tool.poetry]
+name = "lakapati"
+version = "0.1.0"
+description = ""
+authors = ["Aaron Cymor Nemeño"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.14"
+Django = "^6.1.2"
+python-dotenv = "^1.2.4"
+django-tailwind = {extras = ["cookiecutter", "honcho", "reload"], version = "^4.6.0"}
+django-browser-reload = "^1.21.0"
+django-htmx = "^1.29.0"
+mypy = "^2.4.0"

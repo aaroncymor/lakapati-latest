@@ -1,0 +1,54 @@
+<dialog
+  class="modal"
+  id="waterBillingFormModal"
+  {% if open_modal %} x-init="$el.showModal()" {% endif %}
+>
+  <div class="modal-box">
+    <h3 class="font-bold text-lg">Hello!</h3>
+    <form>
+      {% if water_consumption %}
+        <input
+          type="number"
+          name="previous_total"
+          value="{{ water_consumption.previous_total }}"
+        />
+        <input
+          type="number"
+          name="current_total"
+          value="{{ water_consumption.current_total }}"
+        />
+        <input
+          type="number"
+          name="previous_usage"
+          value="{{ water_consumption.previous_usage }}"
+        />
+        <input
+          type="number"
+          name="current_usage"
+          value="{{ water_consumption.current_usage }}"
+        />
+        <p>
+          <span>Cost Per H2O Usage</span>
+          <span>{{ water_consumption.cost_per_h2o_usage }}</span>
+        </p>
+        <p>
+          <span>Maintenance</span>
+          <span>{{ water_consumption.maintenance_fee }}</span>
+        </p>
+        <p>
+          <span>Final Bill</span>
+          <span>{{ water_consumption.final_bill }}</span>
+        </p>
+      {% else %}
+
+      {% endif %}
+    </form>
+    <div class="modal-action">
+      <form method="dialog">
+        <button class="btn">
+          close
+        </button>
+      </form>
+    </div>
+  </div>
+</dialog>
