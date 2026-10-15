@@ -19,8 +19,9 @@ class WaterConsumptionRecord(models.Model):
     current_total = models.IntegerField()
     previous_usage = models.IntegerField()
     current_usage = models.IntegerField()
-    stored_maintenance_fee = models.IntegerField()
-    stored_cost_per_h2o_usage = models.IntegerField()
+    stored_maintenance_fee = models.IntegerField(null=True, blank=True)
+    stored_cost_per_h2o_usage = models.IntegerField(null=True, blank=True)
+    stored_final_bill = models.IntegerField(null=True, blank=True)
     start_date = models.DateField()
     end_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -52,6 +53,12 @@ class WaterConsumptionRecord(models.Model):
         water_usage_diff = self.current_total - self.previous_total
         return (water_usage_diff * cost_per_h2o_usage) + maintenance_fee
 
+    @property
+    def h2o_usage_cost_hist(self):
+        if not self.stored_cost_per_h2o_usage:
+            return -1
+
+        return (self.stored_cost_per_h2o_usage * self.water_usage_diff)
 
     class Meta:
         verbose_name_plural = "Water Consumption Records"

@@ -1,54 +1,159 @@
-<dialog
-  class="modal"
-  id="waterBillingFormModal"
-  {% if open_modal %} x-init="$el.showModal()" {% endif %}
->
+<dialog class="modal" id="waterBillingFormModal" {% if open_modal %} x-init="$el.showModal()" {% endif %} x-data="{
+    cycleStartDate: '{{ cycle_start_date|default:'' }}',
+    cycleEndDate: '{{ cycle_end_date|default:'' }}',
+    prevUsageMinLimit: {{ current_usage|default:0 }},
+    prevUsage: {{ previous_usage|default:0 }},
+    currUsage: {{ current_usage|default:0 }},
+    prevTotalMinLimit: {{ current_total|default:0 }},
+    prevTotal: {{ previous_total|default:0 }},
+    currTotal: {{ current_total|default:0 }},
+    costPerH2OUsage: {{ cost_per_h2o_usage|default:0 }},
+    maintenanceFee: {{ maintenance_fee|default:0 }},
+    get waterUsageDiff() {
+      return this.currUsage - this.prevUsage;
+    },
+    get waterUsageDiffAndCostPerH2OUsageProduct() {
+      return this.waterUsageDiff * this.costPerH2OUsage;
+    },
+    get finalAmount() {
+      return this.waterUsageDiffAndCostPerH2OUsageProduct + this.maintenanceFee;
+    }
+  }">
   <div class="modal-box">
-    <h3 class="font-bold text-lg">Hello!</h3>
-    <form>
-      {% if water_consumption %}
-        <input
-          type="number"
-          name="previous_total"
-          value="{{ water_consumption.previous_total }}"
-        />
-        <input
-          type="number"
-          name="current_total"
-          value="{{ water_consumption.current_total }}"
-        />
-        <input
-          type="number"
-          name="previous_usage"
-          value="{{ water_consumption.previous_usage }}"
-        />
-        <input
-          type="number"
-          name="current_usage"
-          value="{{ water_consumption.current_usage }}"
-        />
-        <p>
-          <span>Cost Per H2O Usage</span>
-          <span>{{ water_consumption.cost_per_h2o_usage }}</span>
-        </p>
-        <p>
-          <span>Maintenance</span>
-          <span>{{ water_consumption.maintenance_fee }}</span>
-        </p>
-        <p>
-          <span>Final Bill</span>
-          <span>{{ water_consumption.final_bill }}</span>
-        </p>
-      {% else %}
-
-      {% endif %}
-    </form>
-    <div class="modal-action">
-      <form method="dialog">
-        <button class="btn">
-          close
-        </button>
-      </form>
+    <h3 class="font-bold text-center text-lg">Water Billing</h3>
+    <div class="divider"></div>
+    <div class="tenant_group_info">
+      <p x-text="`Tenant Group: ${activeTenantGroup.name}`"></p>
+      <p x-text="`Primary Tenant: ${activeTenantGroup.primary}`"></p>
+      <p x-text="`Property Space: ${activeTenantGroup.propertySpace}`"></p>
+      <p x-text="`Multiple Occupants: ${activeTenantGroup.hasMultipleTenants ? 'Yes' : 'No'}`"></p>
     </div>
+    <form hx-post="{% url 'create_water_billing' %}" hx-target="#waterBillingFormModal" hx-swap="outerHTML"
+      hx-on::after-request="if (event.detail.xhr.status === 204) this.closest('dialog').close()" class="w-full pt-5">
+
+      <fieldset class="fieldset">
+        <label class="input">
+          <span class="label">Cycle Start Date</span>
+          <input type="date" name="start_date" class="input validator" placeholder="Start date" style="width: inherit;"
+            x-model="cycleStartDate" />
+        </label>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <label class="input">
+          <span class="label">Cycle End Date</span>
+          <input type="date" name="end_date" class="input validator" placeholder="End date" style="width: inherit;"
+            x-model="cycleEndDate" />
+        </label>
+      </fieldset>
+
+      <div class="divider"></div>
+
+      <fieldset class="fieldset">
+        <label class="floating-label flex flex-col">
+          <input type="number" name="previous_total" class="input validator" :placeholder="`Previous total usage`"
+            :min="prevTotalMinLimit" x-model.number="prevTotal" style="width: inherit;" />
+          <span>Previous total usage</span>
+          <p class="validator-hint"
+            x-text="`Must be greater than or equal current total (latest: ${prevTotalMinLimit})`">
+          </p>
+        </label>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <label class="floating-label flex flex-col">
+          <input type="number" name="current_total" class="input validator"
+            :placeholder="`Current total usage (min: ${prevTotal})`" :min="prevTotal" x-model.number="currTotal"
+            style="width: inherit;" />
+          <span>Current total usage</span>
+          <p class="validator-hint" x-text="`Must be greater than or equal previous total (latest: ${prevTotal})`">
+          </p>
+        </label>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <label class="floating-label flex flex-col">
+          <input type="number" name="previous_usage" class="input validator"
+            :placeholder="`Previous usage (min: ${prevUsageMinLimit})`" :min="prevUsageMinLimit"
+            x-model.number="prevUsage" style="width: inherit;" required />
+          <span>Previous usage</span>
+          <p class="validator-hint"
+            x-text="`Must be greater than or equal current usage (latest: ${prevUsageMinLimit})`">
+          </p>
+        </label>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <label class="floating-label flex flex-col">
+          <input type="number" name="current_usage" class="input validator"
+            :placeholder="`Current usage (min: ${prevUsage})`" :min="prevUsage" x-model.number="currUsage"
+            style="width: inherit;" required />
+          <span>Current usage</span>
+          <p class="validator-hint" x-text="`Must be greater than or equal your previous usage (latest: ${prevUsage})`">
+          </p>
+        </label>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <label class="floating-label flex flex-col">
+          <input type="number" name="stored_cost_per_h2o_usage" class="input validator" placeholder="Cost Per H2O Usage"
+            min="0" x-model.number="costPerH2OUsage" style="width: inherit;" required />
+          <span>Cost Per H2O Usage</span>
+          <p class="validator-hint">Must not be below zero</p>
+        </label>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <label class="floating-label flex flex-col">
+          <input type="number" name="stored_maintenance_fee" class="input validator"
+            placeholder="Maintenance & Admin Fee" min="0" x-model.number="maintenanceFee" style="width: inherit;"
+            required />
+          <span>Maintenance & Admin Fee</span>
+          <p class="validator-hint">Must not be below zero</p>
+        </label>
+      </fieldset>
+
+      <div class="water_billing_modal_summary">
+        <div class="flex flex-row">
+          <p>
+            <span>Cost Per H2O Usage x Water Usage Diff:</span>
+            <span x-text="costPerH2OUsage" class="inline"></span>
+            <span class="inline">×</span>
+            <span x-text="waterUsageDiff" class="inline"></span>
+            <span class="inline">=</span>
+            <span x-text="waterUsageDiffAndCostPerH2OUsageProduct" class="inline"></span>
+          </p>
+        </div>
+        <div class="flex flex-row">
+          <p>
+            <span>Maintenance & Admin Fee: </span>
+            <span x-text="maintenanceFee"></span>
+          </p>
+        </div>
+        <div class="flex flex-row">
+          <p>
+            <span>Total: </span>
+            <span x-text="finalAmount"></span>
+          </p>
+        </div>
+      </div>
+      <input type="hidden" name="stored_final_amount" :value="finalAmount">
+      <input type="hidden" name="tenant_group_id" :value="activeTenantGroup.id">
+
+      <div class="modal-action flex justify-end">
+        {% if share_link %}
+        <!-- Share button -->
+        <a href="{{ share_link }}" class="btn btn-primary">Share</a>
+        {% endif %}
+
+        <!-- Submit button -->
+        <button type="submit" class="btn btn-primary">Submit</button>
+        <!-- Close button -->
+        <button type="button" class="btn" @click="$el.closest('dialog').close()">
+          Close
+        </button>
+      </div>
+
+    </form>
   </div>
 </dialog>

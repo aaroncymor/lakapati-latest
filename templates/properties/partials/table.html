@@ -20,11 +20,18 @@
         <td>{{ group.space.property.name }}&nbsp;|&nbsp;{{ group.space.name }}</td>
         <td>{{ group.tenants.count }}</td>
         <td>
-          <button class="bg-blue-500 p-2 mb-2 cursor-pointer" @click="alert('wow');">
+          <button class="bg-blue-500 p-2 mb-2 cursor-pointer" hx-get="{% url 'billing_history' group.id %}"
+            hx-target="#billingHistoryModal" hx-swap="outerHTML">
             View Billing History
           </button>
-          <button class="bg-green-500 p-2 cursor-pointer" hx-get="{% url 'latest_waterbilling' group.id %}"
-            hx-target="#waterBillingFormModal" hx-swap="outerHTML">
+          <button class="bg-green-500 p-2 cursor-pointer" @click="activeTenantGroup = {
+              id: {{ group.id }},
+              name: '{{ group.name|escapejs }}',
+              primary: '{{ group.primary.first_name|escapejs }} {{ group.primary.last_name|escapejs }}',
+              propertySpace: '{{ group.space.property.name|escapejs }} | {{ group.space.name|escapejs }}',
+              hasMultipleTenants: {{ group.has_multiple_tenants|lower }}
+            }" hx-get="{% url 'latest_waterbilling' group.id %}" hx-target="#waterBillingFormModal"
+            hx-swap="outerHTML">
             Add Water Billing
           </button>
         </td>
@@ -43,4 +50,5 @@
     </tbody>
   </table>
   {% include 'properties/partials/water_billing_modal.html' %}
+  {% include 'properties/partials/billing_history_modal.html' %}
 </div>
