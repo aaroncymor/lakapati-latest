@@ -29,6 +29,10 @@ class PropertyConfig(models.Model):
     maintenance_fee = models.DecimalField(
         max_digits=10, decimal_places=2, default=0.0
     )
+    water_billing_fix_rate = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.0
+    )
+    h2o_usage_cost_threshold = models.IntegerField(default=0)
 
     def __str__(self, *args, **kwargs):
         return f"{self.property.name} Config"

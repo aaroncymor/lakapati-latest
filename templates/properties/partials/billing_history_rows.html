@@ -1,0 +1,84 @@
+{% for billing in water_billings %}
+<li class="p-4 pb-2 text-lg opacity-60 tracking-wide text-cyan-500">
+    {{ billing.start_date }} - {{ billing.end_date }}
+</li>
+<li class="list-row">
+    <div class="list-col-grow">
+        <div class="flex flex-row gap-2">
+            <p class="text-sm opacity-60">
+                <span class="inline w-32">Previous Total:</span>
+                <span class="font-semibold">{{ billing.previous_total }}</span>
+            </p>
+            <p class="text-sm opacity-60">|</p>
+            <p class="text-sm opacity-60">
+                <span class="inline w-32">Current Total:</span>
+                <span class="font-semibold">{{ billing.current_total }}</span>
+            </p>
+            <p class="text-sm opacity-60">|</p>
+            <p class="text-sm opacity-60 text-green-500 font-bold">
+                <span class="inline w-32">Total Water Usage Diff:</span>
+                <span>{{ billing.total_water_usage_diff }}</span>
+            </p>
+        </div>
+        <div class="flex flex-row gap-2">
+            <p class="text-sm opacity-60">
+                <span class="inline w-32">Previous Usage:</span>
+                <span class="font-semibold">{{ billing.previous_usage }}</span>
+            </p>
+            <p class="text-sm opacity-60">|</p>
+            <p class="text-sm opacity-60">
+                <span class="inline w-32">Current Usage:</span>
+                <span class="font-semibold">{{ billing.current_usage }}</span>
+            </p>
+            <p class="text-sm opacity-60">|</p>
+            <p class="text-sm opacity-60 text-green-500 font-bold">
+                <span class="inline w-32">Water Usage Diff:</span>
+                <span>{{ billing.water_usage_diff }}</span>
+            </p>
+        </div>
+        <div class="flex flex-row gap-2">
+            <p class="text-sm opacity-60">
+                {% if billing.apply_fix_rate and billing.water_usage_diff <= billing.stored_h2o_usage_cost_threshold %}
+                    <span class="inline w-32">Fix Rate</span>
+                    <span class="inline w-32">[{{ billing.stored_fix_rate }}]</span>
+                    {% else %}
+                    <span class="inline w-32">Water Usage Diff</span>
+                    <span class="inline w-32">x</span>
+                    <span class="inline w-32">Cost per H2O Usage (Cubic Meter)</span>
+                    <span class="inline w-32">[{{ billing.water_usage_diff }}</span>
+                    <span class="inline w-32">x</span>
+                    <span class="inline w-32">{{ billing.stored_cost_per_h2o_usage }}]:</span>
+                    {% endif %}
+                    <span class="inline w-32">+</span>
+                    <span class="inline w-32">
+                        Maintenance & Admin Fee
+                        {% if billing.maintenance_fee_note %}
+                        ({{ billing.maintenance_fee_note }})
+                        {% endif %}
+                    </span>
+            </p>
+            <p class="text-sm opacity-60">
+                <span class="font-semibold">
+                    {{ billing.h2o_usage_cost_hist }} + {{ billing.stored_maintenance_fee }}
+                </span>
+            </p>
+        </div>
+        <div class="flex flex-row gap-2">
+            <p class="text-sm opacity-60 text-yellow-500 font-bold">
+                <span class="inline w-32">Final Calculated Amount:</span>
+                <span>{{ billing.stored_final_bill }}</span>
+            </p>
+        </div>
+    </div>
+    <a href="{% url 'water_billing_detail' billing.pk %}" target="_blank" class="btn btn-accent">View</a>
+    <a href="#" class="btn btn-accent">Share</a>
+</li>
+{% endfor %}
+
+{% if page_obj.has_next %}
+<li id="billingHistorySentinel" class="flex justify-center p-4"
+    hx-get="{% url 'billing_history' tenant_group_id %}?page={{ page_obj.next_page_number }}"
+    hx-trigger="intersect once root:#billingHistoryScroll" hx-target="this" hx-swap="outerHTML">
+    <span class="loading loading-dots loading-md"></span>
+</li>
+{% endif %}

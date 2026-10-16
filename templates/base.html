@@ -22,10 +22,10 @@
     <nav class="m-0 p-4 overflow-hidden bg-gray-800 flex flex-row justify-end cursor-pointer">
       {% if user and user.is_authenticated %}
       <div class="logout">
-          <form action="{% url 'logout' %}" method="post">
-            {% csrf_token %}
-            <button class="cursor-pointer" type="submit">Logout</button>
-          </form>
+        <form action="{% url 'logout' %}" method="post">
+          {% csrf_token %}
+          <button class="cursor-pointer" type="submit">Logout</button>
+        </form>
       </div>
       {% endif %}
     </nav>

@@ -17,10 +17,30 @@
     </label>
   </div>
   {% include 'properties/partials/table.html' %}
-  <div class="toast">
-    <div class="alert alert-info">
-      <span>New message arrived.</span>
-    </div>
-  </div>
 </section>
+{% endblock %}
+
+{% block xtra_script %}
+<script>
+  // Registered as an Alpine component so the computed getters live in JS
+  // (ASI-safe) instead of inside an HTML attribute, where a formatter can
+  // wrap `return` onto its own line and silently break the calculation.
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('waterBillingForm', (initial = {}) => ({
+      ...initial,
+      get waterUsageDiff() {
+        return this.currUsage - this.prevUsage;
+      },
+      get waterUsageDiffAndCostPerH2OUsageProduct() {
+        return this.waterUsageDiff * this.costPerH2OUsage;
+      },
+      get finalAmount() {
+        if (this.applyFixRate && this.waterUsageDiff <= this.h2oUsageCostThreshold) {
+          return this.fixRate + this.maintenanceFee;
+        }
+        return this.waterUsageDiffAndCostPerH2OUsageProduct + this.maintenanceFee;
+      },
+    }));
+  });
+</script>
 {% endblock %}

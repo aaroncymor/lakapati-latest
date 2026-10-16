@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block xtra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+    integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+{% endblock %}
+
+{% block content %}
+<div class="mx-8 mt-8 px-8 py-8 bg-white !text-black font-mono">
+    <h2 class="text-center text-2xl mb-2">Water Billing</h2>
+    <p class="text-center mb-4">
+        <span class="inline font-bold uppercase">Period Covered:</span>
+        <span class="inline">
+            {{ water_consumption.start_date|date:"M j" }} - {{ water_consumption.end_date|date:"M j Y" }}
+        </span>
+    </p>
+    <div id="water-billing-detail" class="max-w-4xl mx-auto" x-data="{
+}">
+        <!-- Content will be loaded here -->
+        <p>
+            <span class="inline font-bold">Invoice Number:</span>
+            <span class="inline">
+                {{ water_consumption.id }}
+            </span>
+        </p>
+        <div class="flex flex-row justify-between">
+            <p>
+                <span class="inline font-bold">Billed To:</span>
+                <span class="inline">
+                    {{ water_consumption.tenant_group.primary.first_name }}
+                </span>
+                <span class="inline">
+                    {{ water_consumption.tenant_group.primary.last_name }}
+                </span>
+            </p>
+            <p>
+                <span class="inline font-bold">Unit / Room:</span>
+                <span class="inline">
+                    {{ water_consumption.tenant_group.space.name }}
+                </span>
+            </p>
+        </div>
+        <div class="flex flex-row">
+            <p>
+                <span class="inline font-bold">From:</span>
+                <span class="inline">
+                    {{ water_consumption.tenant_group.space.property.name }}
+                </span>
+            </p>
+        </div>
+        <div class="flex flex-row">
+            <p class="block">
+                <span class="inline">
+                    {{ water_consumption.tenant_group.space.property.address }}
+                </span>
+            </p>
+        </div>
+        <div class="flex flex-row gap-2">
+            <p>
+                <span class="inline font-bold">Prev Total Water Usage:</span>
+                <span class="inline">
+                    {{ water_consumption.previous_total }}
+                </span>
+            </p>
+            <p>
+                <span class="inline font-bold">Curr Total Water Usage:</span>
+                <span class="inline">
+                    {{ water_consumption.current_total }}
+                </span>
+            </p>
+            <p>
+                <span class="inline font-bold">Total Water Usage Diff:</span>
+                <span class="inline">
+                    {{ water_consumption.total_water_usage_diff }}
+                </span>
+            </p>
+        </div>
+        <div class="flex flex-row gap-2">
+            <p>
+                <span class="inline font-bold">Prev Water Usage:</span>
+                <span class="inline">
+                    {{ water_consumption.previous_usage }}
+                </span>
+            </p>
+            <p>
+                <span class="inline font-bold">Curr Water Usage:</span>
+                <span class="inline">
+                    {{ water_consumption.current_usage }}
+                </span>
+            </p>
+            <p>
+                <span class="inline font-bold">Water Usage Diff:</span>
+                <span class="inline">
+                    {{ water_consumption.water_usage_diff }}
+                </span>
+            </p>
+        </div>
+        <div class="flex flex-row gap-2 justify-between">
+            <p>
+                <span class="inline font-bold">Description</span>
+            </p>
+            <p>
+                <span class="inline font-bold">Amount</span>
+            </p>
+        </div>
+        <div class="flex flex-row gap-2 justify-between">
+            <p>
+                <span class="inline">Cost Per H2O Usage (Cubic Meter) X Reading Consumption</span>
+            </p>
+            <p>
+                {% if water_consumption.apply_fix_rate %}
+                <span class="inline">(FIX RATE)</span>
+                {% else %}
+                <span class="inline">
+                    {{ water_consumption.water_usage_diff}}
+                </span>
+                <span class="inline">x</span>
+                <span class="inline">
+                    {{ water_consumption.stored_cost_per_h2o_usage }}
+                </span>
+                <span class="inline">=</span>
+                {% endif %}
+                <span class="inline">
+                    {{ water_consumption.h2o_usage_cost_hist }}
+                </span>
+            </p>
+        </div>
+        <div class="flex flex-row gap-2 justify-between">
+            <p>
+                <span class="inline">Maintenance and Admin Fee</span>
+            </p>
+            <p>
+                <span class="inline">{{ water_consumption.maintenance_fee }}</span>
+            </p>
+        </div>
+        <div class="flex flex-row gap-2 justify-between">
+            <p>
+                <span class="inline font-bold">Total</span>
+            </p>
+            <p>
+                <span class="inline font-bold">{{ water_consumption.stored_final_bill }}</span>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

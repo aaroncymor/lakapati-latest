@@ -20,6 +20,10 @@ class WaterConsumptionRecord(models.Model):
     previous_usage = models.IntegerField()
     current_usage = models.IntegerField()
     stored_maintenance_fee = models.IntegerField(null=True, blank=True)
+    maintenance_fee_note = models.CharField(max_length=255, null=True, blank=True)
+    apply_fix_rate = models.BooleanField(default=True)
+    stored_fix_rate = models.IntegerField(null=True, blank=True)
+    stored_h2o_usage_cost_threshold = models.IntegerField(null=True, blank=True)
     stored_cost_per_h2o_usage = models.IntegerField(null=True, blank=True)
     stored_final_bill = models.IntegerField(null=True, blank=True)
     start_date = models.DateField()
@@ -50,15 +54,23 @@ class WaterConsumptionRecord(models.Model):
         config = self.tenant_group.space.property.configuration
         cost_per_h2o_usage = config.cost_per_h2o_usage
         maintenance_fee = config.maintenance_fee
-        water_usage_diff = self.current_total - self.previous_total
+        water_usage_diff = self.current_usage - self.previous_usage
+        
+        if self.apply_fix_rate:
+            fix_rate = config.water_billing_fix_rate
+            if water_usage_diff > config.h2o_usage_cost_threshold:
+                return fix_rate + maintenance_fee
+        
+        # if high usage, apply maintenance fee + cost per h2o usage
         return (water_usage_diff * cost_per_h2o_usage) + maintenance_fee
 
     @property
     def h2o_usage_cost_hist(self):
-        if not self.stored_cost_per_h2o_usage:
-            return -1
+        if self.apply_fix_rate:
+            return self.stored_fix_rate
 
-        return (self.stored_cost_per_h2o_usage * self.water_usage_diff)
+        water_usage_diff = self.current_usage - self.previous_usage
+        return (self.stored_cost_per_h2o_usage * water_usage_diff)
 
     class Meta:
         verbose_name_plural = "Water Consumption Records"

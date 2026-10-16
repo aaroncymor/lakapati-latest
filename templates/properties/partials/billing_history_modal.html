@@ -1,75 +1,11 @@
 <dialog class="modal" id="billingHistoryModal" {% if open_modal %} x-init="$el.showModal()" {% endif %}>
     <div class="modal-box  w-11/12 max-w-5xl">
-        <div class="max-h-64 overflow-y-auto">
-            <h3 class="font-bold text-2xl text-center">Billing History</h3>
-            <div class="divider"></div>
+        <h3 class="font-bold text-2xl text-center">Billing History</h3>
+        <div class="divider"></div>
+        <div id="billingHistoryScroll" class="max-h-64 overflow-y-auto">
             <h4 class="font-bold text-md">Water Billing Records</h4>
-            <ul class="list bg-base-100 rounded-box shadow-md">
-                {% for billing in water_billings %}
-                <li class="p-4 pb-2 text-lg opacity-60 tracking-wide">
-                    {{ billing.start_date }} - {{ billing.end_date }}
-                </li>
-                <li class="list-row">
-                    <div class="list-col-grow">
-                        <div class="flex flex-row gap-2">
-                            <p class="text-sm opacity-60">
-                                <span class="inline w-32">Previous Total:</span>
-                                <span class="font-semibold">{{ billing.previous_total }}</span>
-                            </p>
-                            <p class="text-sm opacity-60">|</p>
-                            <p class="text-sm opacity-60">
-                                <span class="inline w-32">Current Total:</span>
-                                <span class="font-semibold">{{ billing.current_total }}</span>
-                            </p>
-                            <p class="text-sm opacity-60">|</p>
-                            <p class="text-sm opacity-60 text-green-500 font-bold">
-                                <span class="inline w-32">Total Water Usage Diff:</span>
-                                <span>{{ billing.total_water_usage_diff }}</span>
-                            </p>
-                        </div>
-                        <div class="flex flex-row gap-2">
-                            <p class="text-sm opacity-60">
-                                <span class="inline w-32">Previous Usage:</span>
-                                <span class="font-semibold">{{ billing.previous_usage }}</span>
-                            </p>
-                            <p class="text-sm opacity-60">|</p>
-                            <p class="text-sm opacity-60">
-                                <span class="inline w-32">Current Usage:</span>
-                                <span class="font-semibold">{{ billing.current_usage }}</span>
-                            </p>
-                            <p class="text-sm opacity-60">|</p>
-                            <p class="text-sm opacity-60 text-green-500 font-bold">
-                                <span class="inline w-32">Water Usage Diff:</span>
-                                <span>{{ billing.water_usage_diff }}</span>
-                            </p>
-                        </div>
-                        <div class="flex flex-row gap-2">
-                            <p class="text-sm opacity-60">
-                                <span class="inline w-32">Water Usage Diff</span>
-                                <span class="inline w-32">x</span>
-                                <span class="inline w-32">Cost per H2O Usage</span>
-                                <span class="inline w-32">({{ billing.water_usage_diff }}</span>
-                                <span class="inline w-32">x</span>
-                                <span class="inline w-32">{{ billing.stored_cost_per_h2o_usage }})</span>
-                                <span class="inline w-32">+</span>
-                                <span class="inline w-32">Maintenance Fee:</span>
-                            </p>
-                            <p class="text-sm opacity-60">
-                                <span class="font-semibold">
-                                    {{ billing.h2o_usage_cost_hist }} + {{ billing.stored_maintenance_fee }}
-                                </span>
-                            </p>
-                        </div>
-                        <div class="flex flex-row gap-2">
-                            <p class="text-sm opacity-60 text-yellow-500 font-bold">
-                                <span class="inline w-32">Final Calculated Amount:</span>
-                                <span>{{ billing.stored_final_bill }}</span>
-                            </p>
-                        </div>
-                    </div>
-                    <a href="#" class="btn btn-accent">Share</a>
-                </li>
-                {% endfor %}
+            <ul id="billingHistoryList" class="list bg-base-100 rounded-box shadow-md">
+                {% include 'properties/partials/billing_history_rows.html' %}
             </ul>
         </div>
         <div class="modal-action justify-start">

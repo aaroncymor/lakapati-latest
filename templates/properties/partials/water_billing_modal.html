@@ -1,4 +1,4 @@
-<dialog class="modal" id="waterBillingFormModal" {% if open_modal %} x-init="$el.showModal()" {% endif %} x-data="{
+<dialog class="modal" id="waterBillingFormModal" {% if open_modal %} x-init="$el.showModal()" {% endif %} x-data="waterBillingForm({
     cycleStartDate: '{{ cycle_start_date|default:'' }}',
     cycleEndDate: '{{ cycle_end_date|default:'' }}',
     prevUsageMinLimit: {{ current_usage|default:0 }},
@@ -9,16 +9,11 @@
     currTotal: {{ current_total|default:0 }},
     costPerH2OUsage: {{ cost_per_h2o_usage|default:0 }},
     maintenanceFee: {{ maintenance_fee|default:0 }},
-    get waterUsageDiff() {
-      return this.currUsage - this.prevUsage;
-    },
-    get waterUsageDiffAndCostPerH2OUsageProduct() {
-      return this.waterUsageDiff * this.costPerH2OUsage;
-    },
-    get finalAmount() {
-      return this.waterUsageDiffAndCostPerH2OUsageProduct + this.maintenanceFee;
-    }
-  }">
+    maintenanceFeeNote: '{{ maintenance_fee_note|default:''|escapejs }}',
+    fixRate: {{ fix_rate|default:0 }},
+    h2oUsageCostThreshold: {{ h2o_usage_cost_threshold|default:0 }},
+    applyFixRate: {{ apply_fix_rate|yesno:'true,false' }}
+  })">
   <div class="modal-box">
     <h3 class="font-bold text-center text-lg">Water Billing</h3>
     <div class="divider"></div>
@@ -113,15 +108,65 @@
         </label>
       </fieldset>
 
-      <div class="water_billing_modal_summary">
+      <template x-if="applyFixRate">
+        <fieldset class="fieldset">
+          <label class="floating-label flex flex-col">
+            <input type="number" name="stored_fix_rate" class="input validator" placeholder="Fix Rate" min="0"
+              x-model.number="fixRate" style="width: inherit;" required />
+            <span>Fix Rate</span>
+            <p class="validator-hint">Must not be below zero</p>
+          </label>
+        </fieldset>
+      </template>
+
+      <template x-if="applyFixRate">
+        <fieldset class="fieldset">
+          <label class="floating-label flex flex-col">
+            <input type="number" name="stored_h2o_usage_cost_threshold" class="input validator"
+              placeholder="H2O Usage Cost Threshold" min="0" x-model.number="h2oUsageCostThreshold"
+              style="width: inherit;" required />
+            <span>H2O Usage Cost Threshold</span>
+            <p class="validator-hint">Must not be below zero</p>
+          </label>
+        </fieldset>
+      </template>
+
+      <fieldset class="fieldset">
+        <label class="floating-label flex flex-col">
+          <input type="text" name="maintenance_fee_note" class="input validator"
+            placeholder="Maintenance & Admin Fee Note" x-model="maintenanceFeeNote" style="width: inherit;" />
+          <span>Maintenance & Admin Fee Note</span>
+        </label>
+      </fieldset>
+
+      <fieldset class="fieldset flex flex-row items-center mt-7">
+        <input type="checkbox" name="apply_fix_rate" class="checkbox checkbox-md" x-model="applyFixRate" />
+        <span>Apply Fix Rate</span>
+      </fieldset>
+
+      <div class="water_billing_modal_summary mt-7">
         <div class="flex flex-row">
           <p>
-            <span>Cost Per H2O Usage x Water Usage Diff:</span>
-            <span x-text="costPerH2OUsage" class="inline"></span>
-            <span class="inline">×</span>
-            <span x-text="waterUsageDiff" class="inline"></span>
-            <span class="inline">=</span>
-            <span x-text="waterUsageDiffAndCostPerH2OUsageProduct" class="inline"></span>
+            <template x-if="applyFixRate && waterUsageDiff <= h2oUsageCostThreshold">
+              <span>
+                <span>Fix Rate + Maintenance Fee:</span>
+                <span x-text="fixRate" class="inline"></span>
+                <span class="inline">+</span>
+                <span x-text="maintenanceFee" class="inline"></span>
+                <span class="inline">=</span>
+                <span x-text="fixRate + maintenanceFee" class="inline"></span>
+              </span>
+            </template>
+            <template x-if="!(applyFixRate && waterUsageDiff <= h2oUsageCostThreshold)">
+              <span>
+                <span>Cost Per H2O Usage x Water Usage Diff:</span>
+                <span x-text="costPerH2OUsage" class="inline"></span>
+                <span class="inline">×</span>
+                <span x-text="waterUsageDiff" class="inline"></span>
+                <span class="inline">=</span>
+                <span x-text="waterUsageDiffAndCostPerH2OUsageProduct" class="inline"></span>
+              </span>
+            </template>
           </p>
         </div>
         <div class="flex flex-row">
