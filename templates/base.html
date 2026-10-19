@@ -17,6 +17,21 @@
 </head>
 
 <body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <div class="toast toast-bottom toast-end z-50" x-data="{ toasts: [] }" @toast.window="
+    const id = Date.now() + Math.random();
+    toasts.push({ id, type: $event.detail.type, message: $event.detail.message });
+    setTimeout(() => { toasts = toasts.filter(t => t.id !== id) }, 4000);
+  ">
+    <template x-for="t in toasts" :key="t.id">
+      <div class="alert" :class="{
+          'alert-success': t.type === 'success',
+          'alert-error': t.type === 'error',
+          'alert-info': t.type === 'info'
+        }">
+        <span x-text="t.message"></span>
+      </div>
+    </template>
+  </div>
   <main>
     <!-- Navigation -->
     <nav class="m-0 p-4 overflow-hidden bg-gray-800 flex flex-row justify-end cursor-pointer">

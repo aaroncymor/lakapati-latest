@@ -4,8 +4,8 @@
 <section id="dashboard" x-data="{
       activeTenantGroup: {}
     }">
-  <div class="search-table ml-5">
-    <label class="input">
+  <div class="flex flex-row justify-between my-10 mr-5">
+    <label class="input ml-5">
       <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
         <g stroke-linejoin="round" stroke-linecap="round" stroke-width="2.5" fill="none" stroke="currentColor">
           <circle cx="11" cy="11" r="8"></circle>
@@ -15,8 +15,15 @@
       <input name="q" type="search" class="grow" placeholder="Search..." hx-get="{% url 'tenant_groups_list' %}"
         hx-trigger="input changed delay:500ms" hx-target="#tenantGroupTable" />
     </label>
+    <div>
+      <button class="btn bg-green-400 cursor-pointer"
+        onclick="document.getElementById('importBillingFormModal').showModal()">Import
+        Billings</button>
+      <a href="{% url 'download_water_billings_template' %}" class="btn bg-blue-600">Download Template</a>
+    </div>
   </div>
   {% include 'properties/partials/table.html' %}
+  {% include 'properties/partials/import_billing_modal.html' %}
 </section>
 {% endblock %}
 
@@ -42,5 +49,34 @@
       },
     }));
   });
+
+  // Drag & Drop Upload
+  const dropZone = document.getElementById('importBillingForm');
+  const fileInput = document.getElementById('fileInput');
+
+  // Drag over styling shifts border color and background
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('border-indigo-500', 'bg-indigo-50/50');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('border-indigo-500', 'bg-indigo-50/50');
+    });
+  });
+
+  // Handle File Drop
+  dropZone.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files.length > 0) {
+      fileInput.files = e.dataTransfer.files;
+      htmx.trigger(dropZone, 'submit');
+    }
+  })
 </script>
 {% endblock %}
