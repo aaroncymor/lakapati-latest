@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile.prod
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000" # behind nginx you want to be reachable only locally
     env_file: .env
     # No source bind mount: the image is self-contained (code + built CSS baked in).
     command: ./entrypoint.prod.sh
