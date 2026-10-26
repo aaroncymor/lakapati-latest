@@ -1,0 +1,18 @@
+# Production environment variables.
+# This file is gitignored. Replace all placeholder values with real secrets.
+
+# --- Django ---
+DEBUG=False
+DJANGO_SECRET_KEY="CHANGE-ME-generate-a-strong-random-secret"
+# Comma-separated list of the domains/IPs that will serve the app.
+ALLOWED_HOSTS="yourdomain.com,www.yourdomain.com" # production only
+PYTHONUNBUFFERED=1
+
+# --- PostgreSQL --- # production only
+# Presence of POSTGRES_DB switches Django to the Postgres backend.
+POSTGRES_DB=lakapati
+POSTGRES_USER=lakapati
+POSTGRES_PASSWORD=CHANGE-ME-strong-db-password
+# "db" is the compose service name of the Postgres container.
+POSTGRES_HOST=db
+POSTGRES_PORT=5432

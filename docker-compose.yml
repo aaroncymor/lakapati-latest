@@ -1,0 +1,21 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - .:/app
+      - node_modules:/app/theme/static_src/node_modules
+    command: ./entrypoint.sh
+
+  tailwind:
+    build: .
+    env_file: .env
+    volumes:
+      - ./theme:/app/theme
+      - node_modules:/app/theme/static_src/node_modules
+    command: sh -c "mkdir -p /app/theme/static/css/dist && cd /app/theme/static_src && npm run build"
+
+volumes:
+  node_modules:

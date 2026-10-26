@@ -1,0 +1,35 @@
+FROM python:3.14
+
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+# Production defaults; can be overridden at build/run time.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DEBUG=False
+
+WORKDIR /app
+
+# Install libpq (runtime for psycopg) + Node.js/npm (to build Tailwind CSS at build time)
+RUN apt-get update && apt-get install -y curl ca-certificates gnupg libpq5 && \
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip && pip install poetry
+RUN poetry config virtualenvs.create false
+
+# Install Python deps (main + prod group) into the system environment.
+COPY --chown=${USER_ID}:${GROUP_ID} pyproject.toml poetry.lock /app/
+RUN poetry install --no-interaction --no-ansi --no-root --with prod
+
+COPY --chown=${USER_ID}:${GROUP_ID} . /app/
+RUN chmod +x entrypoint.prod.sh
+
+# Build Tailwind CSS at image build time (no live Tailwind service in prod).
+RUN mkdir -p /app/theme/static/css/dist && \
+    cd /app/theme/static_src && npm install && npm run build
+
+EXPOSE 8000
+
+CMD ["./entrypoint.prod.sh"]
