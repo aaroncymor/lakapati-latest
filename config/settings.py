@@ -34,6 +34,22 @@ ALLOWED_HOSTS: list[str] = os.getenv(
     "ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0"
 ).split(",")
 
+if not DEBUG:
+    # Trust the X-Forwarded-Proto header Nginx sets, so Django knows it's HTTPS
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    # Django 4+ requires scheme-qualified trusted origins for POST/CSRF
+    CSRF_TRUSTED_ORIGINS = [
+        "https://yourdomain.com",
+        "https://www.yourdomain.com",
+    ]
+    # Optional hardening once HTTPS works:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
 # Application definition
 
 INSTALLED_APPS = [

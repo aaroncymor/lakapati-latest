@@ -6,6 +6,7 @@ DEBUG=False
 DJANGO_SECRET_KEY="CHANGE-ME-generate-a-strong-random-secret"
 # Comma-separated list of the domains/IPs that will serve the app.
 ALLOWED_HOSTS="yourdomain.com,www.yourdomain.com" # production only
+CSRF_TRUSTED_ORIGINS="https://yourdomain.com,https://www.yourdomain.com" # production only
 PYTHONUNBUFFERED=1
 
 # --- PostgreSQL --- # production only
