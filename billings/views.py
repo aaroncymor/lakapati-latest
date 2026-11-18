@@ -8,13 +8,19 @@ from django.core.paginator import Paginator
 
 from properties.models import TenantGroup
 
-from .forms import WaterConsumptionRecordForm
-from .models import WaterConsumptionRecord
+from .forms import WaterConsumptionRecordForm, ElectricityConsumptionRecordForm
+from .models import WaterConsumptionRecord, ElectricityConsumptionRecord
 
 
 def _safe_int(value, default=0):
     try:
         return int(value)
+    except (TypeError, ValueError):
+        return default
+
+def _safe_float(value, default=0.0):
+    try:
+        return float(value)
     except (TypeError, ValueError):
         return default
 
@@ -37,6 +43,30 @@ def _water_billing_modal_context(data, form=None):
         "maintenance_fee_note": data.get("maintenance_fee_note", ""),
         "apply_fix_rate": data.get("apply_fix_rate") == "on",
         "stored_fix_rate": _safe_int(data.get("stored_fix_rate")),
+        "open_modal": True,
+        "form": form,
+    }
+
+def _electricity_billing_modal_context(data, form=None):
+    """
+    Builds the electricity billing modal context from a submitted data mapping,
+    coercing values to the types the Alpine x-data expects (ints / bool /
+    strings). Used to re-render the modal after a validation failure.
+    """
+    return {
+        "cycle_start_date": data.get("start_date", ""),
+        "cycle_end_date": data.get("end_date", ""),
+        "previous_total": _safe_float(data.get("previous_total")),
+        "current_total": _safe_float(data.get("current_total")),
+        "previous_usage": _safe_float(data.get("previous_usage")),
+        "current_usage": _safe_float(data.get("current_usage")),
+        "cost_per_electricity_usage": _safe_float(data.get("stored_cost_per_electricity_usage")),
+        "maintenance_fee": _safe_float(data.get("stored_maintenance_fee")),
+        "maintenance_fee_note": data.get("maintenance_fee_note", ""),
+        "multiply_by_head_count": data.get("stored_multiply_by_head_count") == "on",
+        "common_usage_per_head": _safe_float(data.get("stored_common_usage_per_head")),
+        "fixed_water_fee": _safe_float(data.get("stored_fixed_water_fee")),
+        "head_count": _safe_int(data.get("stored_head_count")),
         "open_modal": True,
         "form": form,
     }
@@ -65,7 +95,7 @@ def get_group_latest_waterbilling(
     ).order_by("-created_at")[:1]
 
 
-    water_consumption = None if not water_consumptions.count() else water_consumptions[0]
+    latest = None if not water_consumptions.count() else water_consumptions[0]
 
     context = {
         "previous_total": 0,
@@ -87,28 +117,28 @@ def get_group_latest_waterbilling(
     # determine cycle start and end dates
     cycle_start_date = None
     cycle_end_date = None
-    if water_consumption:
-        cycle_start_date = water_consumption.end_date
+    if latest:
+        cycle_start_date = latest.end_date
 
         # add one month to end date (make sure accurate number of days)
-        cycle_end_date = water_consumption.end_date + relativedelta(months=1)
+        cycle_end_date = latest.end_date + relativedelta(months=1)
 
         # set context values
         context["cycle_start_date"] = cycle_start_date.strftime("%Y-%m-%d")
         context["cycle_end_date"] = cycle_end_date.strftime("%Y-%m-%d")
-        context["previous_total"] = water_consumption.previous_total
-        context["previous_usage"] = water_consumption.previous_usage
-        context["current_total"] = water_consumption.current_total
-        context["current_usage"] = water_consumption.current_usage
-        context["apply_fix_rate"] = water_consumption.apply_fix_rate
+        context["previous_total"] = latest.previous_total
+        context["previous_usage"] = latest.previous_usage
+        context["current_total"] = latest.current_total
+        context["current_usage"] = latest.current_usage
+        context["apply_fix_rate"] = latest.apply_fix_rate
         context["fix_rate"] = fix_rate
         context["h2o_usage_cost_threshold"] = threshold
-        context["stored_fix_rate"] = water_consumption.stored_fix_rate
-        context["stored_maintenance_fee"] = water_consumption.stored_maintenance_fee
-        context["stored_cost_per_h2o_usage"] = water_consumption.stored_cost_per_h2o_usage
-        context["maintenance_fee"] = water_consumption.maintenance_fee
-        context["cost_per_h2o_usage"] = water_consumption.cost_per_h2o_usage
-        context["maintenance_fee_note"] = water_consumption.maintenance_fee_note
+        context["stored_fix_rate"] = latest.stored_fix_rate
+        context["stored_maintenance_fee"] = latest.stored_maintenance_fee
+        context["stored_cost_per_h2o_usage"] = latest.stored_cost_per_h2o_usage
+        context["maintenance_fee"] = latest.maintenance_fee
+        context["cost_per_h2o_usage"] = latest.cost_per_h2o_usage
+        context["maintenance_fee_note"] = latest.maintenance_fee_note
 
     if request.htmx:
         return render(
@@ -197,27 +227,35 @@ def get_billing_history(request, tenant_group_id, *args, **kwargs):
         return HttpResponse(status=400)
 
     try:
+        billing_type = request.GET.get("billing_type", "water")
         page_number = int(request.GET.get("page", 1))
     except (ValueError, TypeError):
         page_number = 1
 
-    water_billings = WaterConsumptionRecord.objects.filter(
-        tenant_group_id=tenant_group_id
-    ).order_by("-created_at")
+    if billing_type == "electricity":
+        billings = ElectricityConsumptionRecord.objects.filter(
+            tenant_group_id=tenant_group_id
+        ).order_by("-created_at")
+    else:
+        billings = WaterConsumptionRecord.objects.filter(
+            tenant_group_id=tenant_group_id
+        ).order_by("-created_at")
 
-    paginator = Paginator(water_billings, 25)
+    paginator = Paginator(billings, 25)
     page_obj = paginator.get_page(page_number)
     context = {
-        "water_billings": page_obj,
+        "billings": page_obj,
+        "billing_type": billing_type,
         "page_obj": page_obj,
         "tenant_group_id": tenant_group_id,
         "open_modal": True
     }
-    template = (
-        "properties/partials/billing_history_modal.html"
-        if page_number == 1
-        else "properties/partials/billing_history_rows.html"
-    )
+    # Return the full modal only when opening it (target is the modal itself);
+    # tab switches and infinite scroll target inner elements and get rows only.
+    if request.htmx and request.htmx.target == "billingHistoryModal":
+        template = "properties/partials/billing_history_modal.html"
+    else:
+        template = "properties/partials/billing_history_rows.html"
     return render(request, template, context)
 
 
@@ -408,5 +446,123 @@ def import_water_billings(request, *args, **kwargs):
     response = HttpResponse(status=200)
     response["HX-Trigger"] = json.dumps({
         "toast": {"type": "error", "message": "No file uploaded."}
+    })
+    return response
+
+
+def get_group_latest_electricitybilling(request, tenant_group_id):
+    try:
+        tenant_group = TenantGroup.objects.get(id=tenant_group_id)
+        config = tenant_group.space.property.configuration
+        head_count = tenant_group.tenants.count()
+        maintenance_fee = config.maintenance_fee
+        cost_per_electricity_usage = config.cost_per_electricity_usage
+        common_usage_per_head = config.common_usage_per_head 
+        fixed_water_fee = config.fixed_water_fee
+    except TenantGroup.DoesNotExist:
+        return HttpResponse(status=404)
+
+    electricity_consumptions = ElectricityConsumptionRecord.objects.filter(
+        tenant_group=tenant_group
+    ).order_by('-created_at')[:1]
+
+    latest = None if not electricity_consumptions.count() else electricity_consumptions[0]
+
+    context = {
+        "previous_total": 0,
+        "previous_usage": 0,
+        "current_total": 0,
+        "head_count": head_count,
+        "current_usage": 0,
+        "common_usage_per_head": common_usage_per_head,
+        "stored_maintenance_fee": 0,
+        "stored_head_count": 0,
+        "cost_per_electricity_usage": cost_per_electricity_usage,
+        "stored_cost_per_electricity_usage": 0,
+        "maintenance_fee": maintenance_fee,
+        "maintenance_fee_note": "",
+        "fixed_water_fee": fixed_water_fee,
+        "open_modal": True,
+    }
+
+    # determine cycle start and end dates
+    cycle_start_date = None
+    cycle_end_date = None
+    if latest:
+        cycle_start_date = latest.end_date
+
+        # add one month to end date (make sure accurate number of days)
+        cycle_end_date = latest.end_date + relativedelta(months=1)
+
+        # set remaining context values
+        context["cycle_start_date"] = cycle_start_date.strftime("%Y-%m-%d")
+        context["cycle_end_date"] = cycle_end_date.strftime("%Y-%m-%d")
+        context["previous_total"] = latest.previous_total
+        context["previous_usage"] = latest.previous_usage
+        context["current_total"] = latest.current_total
+        context["current_usage"] = latest.current_usage
+        context["stored_cost_per_electricity_usage"] = latest.stored_cost_per_electricity_usage
+        context["stored_common_usage_per_head"] = latest.stored_common_usage_per_head
+        context["stored_maintenance_fee"] = latest.stored_maintenance_fee
+        context["stored_head_count"] = latest.stored_head_count
+        context["maintenance_fee_note"] = latest.maintenance_fee_note
+        context["multiply_by_head_count"] = latest.stored_multiply_by_head_count
+
+    if request.htmx:
+        return render(
+            request, "properties/partials/electricity_billing_modal.html", 
+            context
+        )
+
+    return HttpResponse(status=400)
+
+
+def create_electricity_billing(request, *args, **kwargs):
+    if request.method != "POST":
+        return HttpResponse(status=405)
+    
+    tenant_group = TenantGroup.objects.filter(
+        pk=request.POST.get("tenant_group_id")
+    ).first()
+    if tenant_group is None:
+        return HttpResponse(status=400)
+
+    form = ElectricityConsumptionRecordForm(request.POST)
+    if not form.is_valid():
+        context = _electricity_billing_modal_context(request.POST, form)
+        response = render(
+            request, "properties/partials/electricity_billing_modal.html", context, 
+            status=400
+        )
+        response["HX-Trigger"] = json.dumps({
+            "toast": {"type": "error", "message": "Please correct the highlighted fields."}
+        })
+        return response
+
+    record = form.save(commit=False)
+    record.tenant_group = tenant_group
+
+    # Recompute final bill server-side
+    electricity_usage_diff = record.current_usage - record.previous_usage
+    maintenance_fee = record.stored_maintenance_fee or 0
+    cost_per_electricity_usage = record.stored_cost_per_electricity_usage or 0
+    common_usage_per_head = record.stored_common_usage_per_head or 0
+    head_count = record.stored_head_count or 0
+    fixed_water_fee = record.stored_fixed_water_fee or 0
+    multiply_by_head_count = record.stored_multiply_by_head_count
+
+    # Calculate final bill
+    final_bill = (
+        maintenance_fee 
+        + (electricity_usage_diff * cost_per_electricity_usage) 
+        + (common_usage_per_head * head_count if multiply_by_head_count else common_usage_per_head)
+        + (fixed_water_fee * head_count if multiply_by_head_count else fixed_water_fee)
+    )
+    record.stored_final_bill = final_bill
+
+    record.save()
+    response = HttpResponse(status=204)
+    response["HX-Trigger"] = json.dumps({
+        "toast": {"type": "success", "message": "Electricity billing created successfully."}
     })
     return response

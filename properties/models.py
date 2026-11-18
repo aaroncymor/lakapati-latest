@@ -16,6 +16,10 @@ class Property(models.Model):
     class Meta:
         verbose_name_plural = "Properties"
 
+BILLING_TYPE_CHOICES = (
+    ('water', 'Water'),
+    ('electricity', 'Electricity')
+)
 
 class PropertyConfig(models.Model):
     property = models.OneToOneField(
@@ -23,6 +27,9 @@ class PropertyConfig(models.Model):
         on_delete=models.CASCADE,
         related_name="configuration"
     )
+    billing_type = models.CharField(max_length=255, choices=BILLING_TYPE_CHOICES, default="water")
+
+    # for water billing (e.g., Berkeley)
     cost_per_h2o_usage = models.DecimalField(
         max_digits=10, decimal_places=2, default=0.0
     )
@@ -33,6 +40,20 @@ class PropertyConfig(models.Model):
         max_digits=10, decimal_places=2, default=0.0
     )
     h2o_usage_cost_threshold = models.IntegerField(default=0)
+
+    # for electricity billing (e.g, Amihan)
+    cost_per_electricity_usage = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.0
+    )
+
+    common_usage_per_head = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.0
+    )
+
+    fixed_water_fee = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0.0
+    )
+
 
     def __str__(self, *args, **kwargs):
         return f"{self.property.name} Config"
@@ -95,6 +116,10 @@ class TenantGroup(models.Model):
     @property
     def has_multiple_tenants(self):
         return self.tenants.count() > 1
+
+    @property
+    def billing_type(self):
+        return self.space.property.configuration.billing_type
 
 
 class Tenant(models.Model):

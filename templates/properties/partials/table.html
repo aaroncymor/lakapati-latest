@@ -24,16 +24,30 @@
             hx-target="#billingHistoryModal" hx-swap="outerHTML">
             View Billing History
           </button>
+          {% if group.billing_type == "water" %}
           <button class="bg-green-500 p-2 cursor-pointer" @click="activeTenantGroup = {
+                id: {{ group.id }},
+                name: '{{ group.name|escapejs }}',
+                primary: '{{ group.primary.first_name|escapejs }} {{ group.primary.last_name|escapejs }}',
+                propertySpace: '{{ group.space.property.name|escapejs }} | {{ group.space.name|escapejs }}',
+                hasMultipleTenants: {{ group.has_multiple_tenants|lower }}
+              }" hx-get="{% url 'latest_waterbilling' group.id %}" hx-target="#waterBillingFormModal"
+            hx-swap="outerHTML">
+            Add Water Billing
+          </button>
+          {% endif %}
+          {% if group.billing_type == "electricity" %}
+          <button class="bg-yellow-500 p-2 cursor-pointer" @click="activeTenantGroup = {
               id: {{ group.id }},
               name: '{{ group.name|escapejs }}',
               primary: '{{ group.primary.first_name|escapejs }} {{ group.primary.last_name|escapejs }}',
               propertySpace: '{{ group.space.property.name|escapejs }} | {{ group.space.name|escapejs }}',
               hasMultipleTenants: {{ group.has_multiple_tenants|lower }}
-            }" hx-get="{% url 'latest_waterbilling' group.id %}" hx-target="#waterBillingFormModal"
+            }" hx-get="{% url 'latest_electricitybilling' group.id %}" hx-target="#electricityBillingFormModal"
             hx-swap="outerHTML">
-            Add Water Billing
+            Add Electricity Billing
           </button>
+          {% endif %}
         </td>
       </tr>
       {% endfor %}
@@ -50,5 +64,7 @@
     </tbody>
   </table>
   {% include 'properties/partials/water_billing_modal.html' %}
-  {% include 'properties/partials/billing_history_modal.html' %}
+  {% include 'properties/partials/electricity_billing_modal.html' %}
+  {# Placeholder; the full modal is swapped in via HTMX when a tenant group is selected. #}
+  <dialog class="modal" id="billingHistoryModal"></dialog>
 </div>

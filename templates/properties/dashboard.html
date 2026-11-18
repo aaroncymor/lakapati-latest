@@ -48,6 +48,36 @@
         return this.waterUsageDiffAndCostPerH2OUsageProduct + this.maintenanceFee;
       },
     }));
+
+    Alpine.data('electricityBillingForm', (initial = {}) => ({
+      ...initial,
+      get electricityUsageDiff() {
+        return (this.currUsage - this.prevUsage).toFixed(1);
+      },
+      get electricityUsageDiffAndCostPerElectricityUsageProduct() {
+        return (this.electricityUsageDiff * this.costPerElectricityUsage).toFixed(1);
+      },
+      get commonUsagePerHeadFinal() {
+        if (this.multiplyByHeadCount === true) {
+          return (this.commonUsagePerHead * this.headCount).toFixed(1);
+        }
+        return this.commonUsagePerHead;
+      },
+      get fixedWaterFeeFinal() {
+        if (this.multiplyByHeadCount == true) {
+          return (this.fixedWaterFee * this.headCount).toFixed(1);
+        }
+        return this.fixedWaterFee;
+      },
+      get finalAmount() {
+        return (
+          parseFloat(this.electricityUsageDiffAndCostPerElectricityUsageProduct) +
+          parseFloat(this.maintenanceFee) +
+          parseFloat(this.commonUsagePerHeadFinal) +
+          parseFloat(this.fixedWaterFeeFinal)
+        ).toFixed(0);
+      },
+    }));
   });
 
   // Drag & Drop Upload
