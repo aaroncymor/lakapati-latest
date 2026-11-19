@@ -43,4 +43,9 @@ urlpatterns = [
         views.create_electricity_billing,
         name="create_electricity_billing"
     ),
+    path(
+        '<uuid:pk>/electricity-billing-detail',
+        views.detail_electricity_billing,
+        name="electricity_billing_detail"
+    ),
 ]

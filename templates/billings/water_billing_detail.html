@@ -56,47 +56,43 @@
                 </span>
             </p>
         </div>
-        <div class="flex flex-row gap-2">
-            <p>
-                <span class="inline font-bold">Prev Total Water Usage:</span>
-                <span class="inline">
-                    {{ water_consumption.previous_total }}
-                </span>
-            </p>
-            <p>
-                <span class="inline font-bold">Curr Total Water Usage:</span>
-                <span class="inline">
-                    {{ water_consumption.current_total }}
-                </span>
-            </p>
-            <p>
-                <span class="inline font-bold">Total Water Usage Diff:</span>
-                <span class="inline">
-                    {{ water_consumption.total_water_usage_diff }}
-                </span>
-            </p>
+        <div class="flex flex-row">
+            <table class="w-full">
+                <thead class="text-left">
+                    <tr>
+                        <th class="font-bold">Prev Total Water Usage:</th>
+                        <th class="font-bold">Curr Total Water Usage:</th>
+                        <th class="font-bold">Total Water Usage Diff:</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ water_consumption.previous_total }}</td>
+                        <td>{{ water_consumption.current_total }}</td>
+                        <td>{{ water_consumption.total_water_usage_diff }}</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
         <div class="flex flex-row gap-2">
-            <p>
-                <span class="inline font-bold">Prev Water Usage:</span>
-                <span class="inline">
-                    {{ water_consumption.previous_usage }}
-                </span>
-            </p>
-            <p>
-                <span class="inline font-bold">Curr Water Usage:</span>
-                <span class="inline">
-                    {{ water_consumption.current_usage }}
-                </span>
-            </p>
-            <p>
-                <span class="inline font-bold">Water Usage Diff:</span>
-                <span class="inline">
-                    {{ water_consumption.water_usage_diff }}
-                </span>
-            </p>
+            <table class="w-full">
+                <thead class="text-left">
+                    <tr>
+                        <th class="font-bold">Prev Water Usage:</th>
+                        <th class="font-bold">Curr Water Usage:</th>
+                        <th class="font-bold">Water Usage Diff:</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ water_consumption.previous_usage }}</td>
+                        <td>{{ water_consumption.current_usage }}</td>
+                        <td>{{ water_consumption.water_usage_diff }}</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-        <div class="flex flex-row gap-2 justify-between">
+        <div class="flex flex-row gap-2 justify-between mt-4">
             <p>
                 <span class="inline font-bold">Description</span>
             </p>
@@ -104,6 +100,7 @@
                 <span class="inline font-bold">Amount</span>
             </p>
         </div>
+        <div class="divider divider-neutral"></div>
         <div class="flex flex-row gap-2 justify-between">
             <p>
                 <span class="inline">Cost Per H2O Usage (Cubic Meter) X Reading Consumption</span>
@@ -131,9 +128,10 @@
                 <span class="inline">Maintenance and Admin Fee</span>
             </p>
             <p>
-                <span class="inline">{{ water_consumption.maintenance_fee }}</span>
+                <span class="inline">{{ water_consumption.maintenance_fee|floatformat:0 }}</span>
             </p>
         </div>
+        <div class="divider divider-neutral"></div>
         <div class="flex flex-row gap-2 justify-between">
             <p>
                 <span class="inline font-bold">Total</span>

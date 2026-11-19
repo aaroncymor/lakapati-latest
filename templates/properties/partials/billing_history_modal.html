@@ -3,12 +3,15 @@
         <h3 class="font-bold text-2xl text-center">Billing History</h3>
         <div class="divider"></div>
         <div class="tabs tabs-box">
+            {% if billing_type == "water" %}
             <input hx-get="{% url 'billing_history' tenant_group_id %}?page=1&billing_type=water"
                 hx-target="#billingHistoryList" hx-swap="innerHTML" type="radio" name="billing_tabs" class="tab"
                 aria-label="Water Billing" checked="checked" />
+            {% else %}
             <input hx-get="{% url 'billing_history' tenant_group_id %}?page=1&billing_type=electricity"
                 hx-target="#billingHistoryList" hx-swap="innerHTML" type="radio" name="billing_tabs" class="tab"
                 aria-label="Electricity Billing" />
+            {% endif %}
         </div>
         <div id="billingHistoryScroll" class="max-h-64 overflow-y-auto">
             <ul id="billingHistoryList" class="list bg-base-100 rounded-box shadow-md">

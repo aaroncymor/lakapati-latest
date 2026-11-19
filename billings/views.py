@@ -227,7 +227,13 @@ def get_billing_history(request, tenant_group_id, *args, **kwargs):
         return HttpResponse(status=400)
 
     try:
-        billing_type = request.GET.get("billing_type", "water")
+        tenant_group = TenantGroup.objects.get(id=tenant_group_id)
+        config = tenant_group.space.property.configuration
+        billing_type = config.billing_type
+    except TenantGroup.DoesNotExist:
+        return HttpResponse(status=404)
+
+    try:
         page_number = int(request.GET.get("page", 1))
     except (ValueError, TypeError):
         page_number = 1
@@ -241,7 +247,7 @@ def get_billing_history(request, tenant_group_id, *args, **kwargs):
             tenant_group_id=tenant_group_id
         ).order_by("-created_at")
 
-    paginator = Paginator(billings, 25)
+    paginator = Paginator(billings, 3)
     page_obj = paginator.get_page(page_number)
     context = {
         "billings": page_obj,
@@ -514,6 +520,20 @@ def get_group_latest_electricitybilling(request, tenant_group_id):
             context
         )
 
+    return HttpResponse(status=400)
+
+
+def detail_electricity_billing(request, pk, *args, **kwargs):
+    if request.method == "GET":
+        # Handle GET request
+        electricity_consumption = ElectricityConsumptionRecord.objects.get(pk=pk)
+        context = {
+            "electricity_consumption": electricity_consumption
+        }
+        return render(
+            request, "billings/electricity_billing_detail.html",
+            context
+        )
     return HttpResponse(status=400)
 
 

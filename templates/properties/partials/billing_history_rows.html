@@ -112,11 +112,11 @@
         <div class="flex flex-row gap-2">
             <p class="text-sm opacity-60">
                 <span class="inline w-32">Cost per Electricity Usage:</span>
-                <span>{{ billing.electricity_usage_diff }}</span>
-                <span>x</span>
-                <span>{{ billing.stored_cost_per_electricity_usage }}</span>
-                <span>=</span>
-                <span class="font-semibold">{{ billing.calculated_cost_per_electricity_usage }}</span>
+                <tfor>{{ billing.electricity_usage_diff|floatformat:2 }}</span>
+                    <span>x</span>
+                    <span>{{ billing.stored_cost_per_electricity_usage }}</span>
+                    <span>=</span>
+                    <span class="font-semibold">{{ billing.calculated_cost_per_electricity_usage|floatformat:2 }}</span>
             </p>
         </div>
         {% if billing.stored_multiply_by_head_count %}
@@ -128,16 +128,16 @@
             {% if billing.stored_multiply_by_head_count %}
             <p class="text-sm opacity-60">
                 <span class="inline w-32">Common Usage Cost x Head Count:</span>
-                <span class="font-semibold">{{ billing.stored_common_usage_per_head }}</span>
+                <span class="font-semibold">{{ billing.stored_common_usage_per_head|floatformat:2 }}</span>
                 <span>x</span>
                 <span class="font-semibold">{{ billing.stored_head_count }}</span>
                 <span>=</span>
-                <span class="font-semibold">{{ billing.calculated_common_usage_per_head }}</span>
+                <span class="font-semibold">{{ billing.calculated_common_usage_per_head|floatformat:2 }}</span>
             </p>
             {% else %}
             <p class="text-sm opacity-60">
                 <span class="inline w-32">Common Usage Cost:</span>
-                <span class="font-semibold">{{ billing.stored_common_usage_per_head }}</span>
+                <span class="font-semibold">{{ billing.stored_common_usage_per_head|floatformat:2 }}</span>
             </p>
             {% endif %}
         </div>
@@ -171,6 +171,7 @@
             </p>
         </div>
     </div>
+    <a href="{% url 'electricity_billing_detail' billing.pk %}" target="_blank" class="btn btn-accent">View</a>
     <a href="#" class="btn btn-accent">Share</a>
 </li>
 {% else %}
@@ -182,7 +183,7 @@
 
 {% if page_obj.has_next %}
 <li id="billingHistorySentinel" class="flex justify-center p-4"
-    hx-get="{% url 'billing_history' tenant_group_id %}?page={{ page_obj.next_page_number }}"
+    hx-get="{% url 'billing_history' tenant_group_id %}?page={{ page_obj.next_page_number }}&billing_type={{ billing_type }}"
     hx-trigger="intersect once root:#billingHistoryScroll" hx-target="this" hx-swap="outerHTML">
     <span class="loading loading-dots loading-md"></span>
 </li>
