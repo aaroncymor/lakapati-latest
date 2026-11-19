@@ -1,25 +1,31 @@
 {% extends "base.html" %}
 
 {% block xtra_head %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
-    integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- html2canvas-pro: maintained fork that supports modern CSS color functions (oklch, etc.) -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.11/dist/html2canvas-pro.min.js"
+    integrity="sha384-Wm+alMbg1fxSJBbLMXKBb1ZfoWBd0FwJml5aEbKolDB41cMjTfek0cLKgCku6MAF" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"
+    integrity="sha384-ytX5osgYad9GPnagB0k+CxKTir/bsE7AfpzvCnQ7owfeWuDd+2l2y0PSIqRK+z/2" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
 {% endblock %}
 
 {% block content %}
-<div class="">
-    <button class="btn btn-primary" @click="downloadPdf">Download PDF</button>
+<div class="mb-4">
+    <button id="download-pdf-btn" class="btn btn-primary">Download PDF</button>
 </div>
 <div class="mx-8 mt-8 px-8 py-8 bg-white !text-black font-mono">
-    <h2 class="text-center text-2xl mb-2">Electricity, Water, & Maintenance Billing</h2>
-    <p class="text-center mb-4">
-        <span class="inline font-bold uppercase">Period Covered:</span>
-        <span class="inline">
-            {{ electricity_consumption.start_date|date:"M j" }} - {{ electricity_consumption.end_date|date:"M j Y" }}
-        </span>
-    </p>
+
     <div id="electricity-billing-detail" class="max-w-4xl mx-auto" x-data="{
 }">
+        <h2 class="text-center text-2xl mb-2">Electricity, Water, & Maintenance Billing</h2>
+        <p class="text-center mb-4">
+            <span class="inline font-bold uppercase">Period Covered:</span>
+            <span class="inline">
+                <span>{{ electricity_consumption.start_date|date:"M j" }}</span> -
+                <span>{{ electricity_consumption.end_date|date:"M j Y" }}</span>
+            </span>
+        </p>
         <!-- Content will be loaded here -->
         <p>
             <span class="inline font-bold">Invoice Number:</span>
@@ -188,11 +194,40 @@
 
 {% block xtra_script %}
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Add any additional JavaScript for this page here
-        function downloadPdf() {
-            const element = document.getElementById('electricity-billing-detail');
-            html2pdf().from(element).save();
+    const downloadPdfBtn = document.getElementById('download-pdf-btn');
+    downloadPdfBtn.addEventListener('click', async function () {
+        const element = document.getElementById('electricity-billing-detail');
+        downloadPdfBtn.disabled = true;
+        try {
+            // html2canvas-pro understands oklch(), so no color neutralizing needed.
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+            });
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+            // Size the PDF page to the invoice content (plus a small margin) so the
+            // output is "cropped" to the invoice instead of a fixed A4 sheet.
+            const margin = 8; // mm
+            const pxToMm = 25.4 / 96; // CSS pixels -> mm
+            const imgWidth = (canvas.width / 2) * pxToMm;  // divide by scale (2)
+            const imgHeight = (canvas.height / 2) * pxToMm;
+            const pageWidth = imgWidth + margin * 2;
+            const pageHeight = imgHeight + margin * 2;
+
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                unit: 'mm',
+                orientation: pageWidth >= pageHeight ? 'landscape' : 'portrait',
+                format: [pageWidth, pageHeight],
+            });
+            pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+            pdf.save('electricity-billing-{{ electricity_consumption.id }}.pdf');
+        } catch (err) {
+            console.error('PDF generation failed:', err);
+        } finally {
+            downloadPdfBtn.disabled = false;
         }
     });
 </script>
