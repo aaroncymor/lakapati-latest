@@ -41,16 +41,25 @@ class WaterConsumptionRecord(models.Model):
 
     @property
     def cost_per_h2o_usage(self):
+        if self.stored_cost_per_h2o_usage:
+            return self.stored_cost_per_h2o_usage
+
         config = self.tenant_group.space.property.configuration
         return config.cost_per_h2o_usage
 
     @property
     def maintenance_fee(self):
+        if self.stored_maintenance_fee:
+            return self.stored_maintenance_fee
+        
         config = self.tenant_group.space.property.configuration
         return config.maintenance_fee
 
     @property
     def final_bill(self):
+        if self.stored_final_bill:
+            return self.stored_final_bill
+        
         config = self.tenant_group.space.property.configuration
         cost_per_h2o_usage = config.cost_per_h2o_usage
         maintenance_fee = config.maintenance_fee
@@ -65,12 +74,12 @@ class WaterConsumptionRecord(models.Model):
         return (water_usage_diff * cost_per_h2o_usage) + maintenance_fee
 
     @property
-    def h2o_usage_cost_hist(self):
+    def calculated_cost_per_water_usage(self):
         if self.apply_fix_rate:
             return self.stored_fix_rate
 
-        water_usage_diff = self.current_usage - self.previous_usage
-        return (self.stored_cost_per_h2o_usage * water_usage_diff)
+        usage_diff = self.current_usage - self.previous_usage
+        return (self.stored_cost_per_h2o_usage * usage_diff)
 
     class Meta:
         verbose_name_plural = "Water Consumption Records"
