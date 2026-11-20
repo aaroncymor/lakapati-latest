@@ -24,6 +24,164 @@ def _safe_float(value, default=0.0):
     except (TypeError, ValueError):
         return default
 
+class BillingImportError(Exception):
+    pass
+
+def _validate_file_type(uploaded_file):
+    allowed_mimetypes = [
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.oasis.opendocument.spreadsheet',
+    ]
+    if uploaded_file.content_type not in allowed_mimetypes:
+        raise BillingImportError("Invalid file type. Please upload an Excel file.")
+
+def _validate_date_range(df):
+    # imported file must have same start_date and end_date for all rows.
+    # Skip the placeholder/guidance row (index 0) and any empty rows.
+    data = df.iloc[1:][['start_date', 'end_date']].dropna()
+    unique_date_ranges = data.drop_duplicates()
+    if len(unique_date_ranges) > 1:
+        raise BillingImportError("All rows must have the same start_date and end_date.")
+
+
+def import_water_billings(uploaded_file):
+    # Validate file type - only allow Excel files
+    _validate_file_type(uploaded_file)
+
+    # read the file
+    df = pd.read_excel(uploaded_file)
+
+    # Validate date range
+    _validate_date_range(df)
+
+    # get previous total and current total by sum of previous_usage and current_usage
+    # must be same start_date and end_date for all rows
+    # (cast to float: pandas .sum() returns a numpy scalar that Decimal() rejects)
+    previous_total = float(df.iloc[1:]['previous_usage'].sum())
+    current_total = float(df.iloc[1:]['current_usage'].sum())
+    
+    # loop through the rows, skipping the header (index 0) which is the placeholder row
+    for idx, row in df.iterrows():
+        # Skip the first row (placeholder/guidance row from template)
+        if idx == 0:
+            continue
+        
+        # Skip rows where tenant_group_id contains placeholder text
+        tenant_group_id = str(row['tenant_group_id']).strip()
+        if tenant_group_id == '(Do not edit)' or not tenant_group_id:
+            continue
+            
+        # The start_date and end_date must not be existing in the database
+        if WaterConsumptionRecord.objects.filter(
+            tenant_group_id=tenant_group_id,
+            start_date=row['start_date'], 
+            end_date=row['end_date']
+        ).exists():
+            continue
+        
+        try:
+            # Compute stored_final_bill server-side
+            usage_diff = float(row['current_usage']) - float(row['previous_usage'])
+            maintenance_fee = float(row['maintenance_fee']) if pd.notna(row['maintenance_fee']) else 0
+            cost_per_h2o_usage = float(row['cost_per_h2o_usage']) if pd.notna(row['cost_per_h2o_usage']) else 0
+            fix_rate = float(row['fix_rate']) if pd.notna(row['fix_rate']) else 0
+            h2o_usage_cost_threshold = int(row['h2o_usage_cost_threshold']) if pd.notna(row['h2o_usage_cost_threshold']) else 0
+            apply_fix_rate = str(row['apply_fix_rate']).upper() in ('TRUE', '1', 'YES')
+            
+            if apply_fix_rate and usage_diff <= h2o_usage_cost_threshold:
+                stored_final_bill = fix_rate + maintenance_fee
+            else:
+                stored_final_bill = (usage_diff * cost_per_h2o_usage) + maintenance_fee
+            
+            WaterConsumptionRecord.objects.create(
+                tenant_group_id=tenant_group_id,
+                start_date=row['start_date'],
+                end_date=row['end_date'],
+                previous_total=previous_total,
+                current_total=current_total,
+                previous_usage=float(row['previous_usage']),
+                current_usage=float(row['current_usage']),
+                apply_fix_rate=apply_fix_rate,
+                stored_fix_rate=fix_rate,
+                stored_h2o_usage_cost_threshold=h2o_usage_cost_threshold,
+                stored_cost_per_h2o_usage=cost_per_h2o_usage,
+                stored_maintenance_fee=maintenance_fee,
+                maintenance_fee_note=row['maintenance_fee_note'] if pd.notna(row['maintenance_fee_note']) else '',
+                stored_final_bill=stored_final_bill,
+            )
+        except Exception as e:
+            print(f"Error processing row {idx}: {e}")
+
+
+def import_electricity_billings(uploaded_file):
+    _validate_file_type(uploaded_file)
+
+    # read the file
+    df = pd.read_excel(uploaded_file)
+
+    # Validate date range
+    _validate_date_range(df)
+    
+    # get previous total and current total by sum of previous_usage and current_usage
+    # must be same start_date and end_date for all rows
+    previous_total = float(df.iloc[1:]['previous_usage'].sum())
+    current_total = float(df.iloc[1:]['current_usage'].sum())
+    
+    # loop through the rows, skipping the header (index 0) which is the placeholder row
+    for idx, row in df.iterrows():
+        # Skip the first row (placeholder/guidance row from template)
+        if idx == 0:
+            continue
+
+        tenant_group_id = row.get("tenant_group_id")
+        if not tenant_group_id:
+            continue
+
+        # The start_date and end_date must not be existing in the database
+        if ElectricityConsumptionRecord.objects.filter(
+            tenant_group_id=tenant_group_id,
+            start_date=row['start_date'], 
+            end_date=row['end_date']
+        ).exists():
+            continue
+
+        try:
+            usage_diff = float(row['current_usage']) - float(row['previous_usage'])
+            head_count = int(row['head_count']) if pd.notna(row['head_count']) else 0
+            if not head_count:
+                tenant_group = TenantGroup.objects.get(id=tenant_group_id)
+                head_count = tenant_group.tenants.count()
+            multiply_by_head_count = bool(row['multiply_by_head_count']) if pd.notna(row['multiply_by_head_count']) else True
+            cost_per_electricity_usage = float(row['cost_per_electricity_usage']) if pd.notna(row['cost_per_electricity_usage']) else 0.0
+            common_usage_per_head = float(row['common_usage_per_head']) if pd.notna(row['common_usage_per_head']) else 0.0
+            fixed_water_fee = float(row['fixed_water_fee']) if pd.notna(row['fixed_water_fee']) else 0.0
+            
+            final_bill = (
+                (usage_diff * cost_per_electricity_usage) 
+                + (common_usage_per_head * head_count if multiply_by_head_count else common_usage_per_head)
+                + (fixed_water_fee * head_count if multiply_by_head_count else fixed_water_fee)
+            )
+            
+            # Create the record
+            ElectricityConsumptionRecord.objects.create(
+                tenant_group_id=tenant_group_id,
+                start_date=row['start_date'],
+                end_date=row['end_date'],
+                previous_total=float(previous_total),
+                current_total=float(current_total),
+                previous_usage=float(row['previous_usage']),
+                current_usage=float(row['current_usage']),
+                stored_head_count=head_count,
+                stored_multiply_by_head_count=multiply_by_head_count,
+                stored_cost_per_electricity_usage=cost_per_electricity_usage,
+                stored_common_usage_per_head=common_usage_per_head,
+                stored_fixed_water_fee=fixed_water_fee,
+                stored_final_bill=final_bill,
+            )
+        except (ValueError, TypeError) as e:
+            print(f"Error processing row {idx}: {e}")
+
 
 def _water_billing_modal_context(data, form=None):
     """
@@ -291,8 +449,6 @@ def download_water_billings_template(request, *args, **kwargs):
         'property_and_space': '(Do not edit)',
         'start_date': 'YYYY-MM-DD (e.g. 2025-10-01)',
         'end_date': 'YYYY-MM-DD (e.g. 2025-10-31)',
-        'previous_total': '100',
-        'current_total': '110',
         'previous_usage': '50',
         'current_usage': '55',
         'apply_fix_rate': 'TRUE/FALSE',
@@ -310,6 +466,9 @@ def download_water_billings_template(request, *args, **kwargs):
         property_and_space = f"{property.name} - {space.name}"
 
         config = property.configuration
+        if config.billing_type != 'water':
+            continue
+
         config_maintenance_fee = config.maintenance_fee
         config_fix_rate = config.water_billing_fix_rate
         config_h2o_usage_cost_threshold = config.h2o_usage_cost_threshold
@@ -318,8 +477,6 @@ def download_water_billings_template(request, *args, **kwargs):
         # get latest recorded water billing for this tenant group
         start_date = ""
         end_date = ""
-        previous_total = 0
-        current_total = 0
         previous_usage = 0
         current_usage = 0
         apply_fix_rate = True
@@ -329,25 +486,19 @@ def download_water_billings_template(request, *args, **kwargs):
         maintenance_fee = config_maintenance_fee
         maintenance_fee_note = ""
 
-        latest_water_billing = WaterConsumptionRecord.objects.filter(
-            tenant_group=tenant_group
-        ).order_by('-created_at').first()
-        if latest_water_billing:
-            start_date = latest_water_billing.end_date
-            end_date = latest_water_billing.end_date + relativedelta(months=1)
-            previous_total = latest_water_billing.previous_total
-            current_total = latest_water_billing.current_total
-            previous_usage = latest_water_billing.previous_usage
-            current_usage = latest_water_billing.current_usage
+        latest_billing = tenant_group.water_consumption_records.order_by('-created_at').first()
+        if latest_billing:
+            start_date = latest_billing.end_date.strftime("%Y-%m-%d")
+            end_date = (latest_billing.end_date + relativedelta(months=1)).strftime("%Y-%m-%d")
+            previous_usage = latest_billing.previous_usage
+            current_usage = latest_billing.current_usage
 
         data.append({
             'tenant_group_id': str(tenant_group.id),
             'tenant_group_name': tenant_group.name,
             'property_and_space': property_and_space,
-            'start_date': start_date.strftime('%Y-%m-%d') if start_date else "",
-            'end_date': end_date.strftime('%Y-%m-%d') if end_date else "",
-            'previous_total': previous_total,
-            'current_total': current_total,
+            'start_date': start_date,
+            'end_date': end_date,
             'previous_usage': previous_usage,
             'current_usage': current_usage,
             'apply_fix_rate': apply_fix_rate,
@@ -369,83 +520,37 @@ def download_water_billings_template(request, *args, **kwargs):
     return response
 
 
-def import_water_billings(request, *args, **kwargs):
+def import_billings(request, *args, **kwargs):
     if request.method == 'POST' and request.FILES.get('file'):
         uploaded_file = request.FILES['file']
+    
+        try:
+            file_name = uploaded_file.name.lower()
+            if file_name.startswith('water_billing'):
+                import_water_billings(uploaded_file)
+            elif file_name.startswith('electricity_billing'):
+                import_electricity_billings(uploaded_file)
+            else:
+                response = HttpResponse(status=200)
+                response["HX-Trigger"] = json.dumps({
+                    "toast": {
+                        "type": "error", 
+                        "message": "Invalid file name. File must start with 'water_billing' or 'electricity_billing'."
+                    }
+                })
+                return response
 
-        # Validate file type - only allow Excel files
-        allowed_mimetypes = [
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.oasis.opendocument.spreadsheet',
-        ]
-        if uploaded_file.content_type not in allowed_mimetypes:
+        except BillingImportError as e:
             response = HttpResponse(status=200)
             response["HX-Trigger"] = json.dumps({
-                "toast": {"type": "error", "message": "Invalid file type. Please upload an Excel file."}
+                "toast": {"type": "error", "message": str(e)}
             })
             return response
-        
-        # read the file
-        df = pd.read_excel(uploaded_file)
-        
-        # loop through the rows, skipping the header (index 0) which is the placeholder row
-        for idx, row in df.iterrows():
-            # Skip the first row (placeholder/guidance row from template)
-            if idx == 0:
-                continue
-            
-            # Skip rows where tenant_group_id contains placeholder text
-            tenant_group_id = str(row['tenant_group_id']).strip()
-            if tenant_group_id == '(Do not edit)' or not tenant_group_id:
-                continue
-                
-            # The start_date and end_date must not be existing in the database
-            if WaterConsumptionRecord.objects.filter(
-                tenant_group_id=tenant_group_id,
-                start_date=row['start_date'], 
-                end_date=row['end_date']
-            ).exists():
-                continue
-            
-            try:
-                # Compute stored_final_bill server-side
-                water_usage_diff = int(row['current_usage']) - int(row['previous_usage'])
-                maintenance_fee = int(row['maintenance_fee']) if pd.notna(row['maintenance_fee']) else 0
-                cost_per_h2o_usage = int(row['cost_per_h2o_usage']) if pd.notna(row['cost_per_h2o_usage']) else 0
-                fix_rate = int(row['fix_rate']) if pd.notna(row['fix_rate']) else 0
-                h2o_usage_cost_threshold = int(row['h2o_usage_cost_threshold']) if pd.notna(row['h2o_usage_cost_threshold']) else 0
-                apply_fix_rate = str(row['apply_fix_rate']).upper() in ('TRUE', '1', 'YES')
-                
-                if apply_fix_rate and water_usage_diff <= h2o_usage_cost_threshold:
-                    stored_final_bill = fix_rate + maintenance_fee
-                else:
-                    stored_final_bill = (water_usage_diff * cost_per_h2o_usage) + maintenance_fee
-                
-                WaterConsumptionRecord.objects.create(
-                    tenant_group_id=tenant_group_id,
-                    start_date=row['start_date'],
-                    end_date=row['end_date'],
-                    previous_total=int(row['previous_total']),
-                    current_total=int(row['current_total']),
-                    previous_usage=int(row['previous_usage']),
-                    current_usage=int(row['current_usage']),
-                    apply_fix_rate=apply_fix_rate,
-                    stored_fix_rate=fix_rate,
-                    stored_h2o_usage_cost_threshold=h2o_usage_cost_threshold,
-                    stored_cost_per_h2o_usage=cost_per_h2o_usage,
-                    stored_maintenance_fee=maintenance_fee,
-                    maintenance_fee_note=row['maintenance_fee_note'] if pd.notna(row['maintenance_fee_note']) else '',
-                    stored_final_bill=stored_final_bill,
-                )
-            except Exception as e:
-                print(f"Error processing row {idx}: {e}")
-        
-        # Process the file here
-        # For now, just return a success message
+
+
         response = HttpResponse(status=200)
         response["HX-Trigger"] = json.dumps({
-            "toast": {"type": "success", "message": "Water billing imported successfully."}
+            "toast": {"type": "success", "message": "Billing imported successfully."}
         })
         return response
     
@@ -461,7 +566,6 @@ def get_group_latest_electricitybilling(request, tenant_group_id):
         tenant_group = TenantGroup.objects.get(id=tenant_group_id)
         config = tenant_group.space.property.configuration
         head_count = tenant_group.tenants.count()
-        maintenance_fee = config.maintenance_fee
         cost_per_electricity_usage = config.cost_per_electricity_usage
         common_usage_per_head = config.common_usage_per_head 
         fixed_water_fee = config.fixed_water_fee
@@ -481,12 +585,9 @@ def get_group_latest_electricitybilling(request, tenant_group_id):
         "head_count": head_count,
         "current_usage": 0,
         "common_usage_per_head": common_usage_per_head,
-        "stored_maintenance_fee": 0,
         "stored_head_count": 0,
         "cost_per_electricity_usage": cost_per_electricity_usage,
         "stored_cost_per_electricity_usage": 0,
-        "maintenance_fee": maintenance_fee,
-        "maintenance_fee_note": "",
         "fixed_water_fee": fixed_water_fee,
         "open_modal": True,
     }
@@ -509,9 +610,7 @@ def get_group_latest_electricitybilling(request, tenant_group_id):
         context["current_usage"] = latest.current_usage
         context["stored_cost_per_electricity_usage"] = latest.stored_cost_per_electricity_usage
         context["stored_common_usage_per_head"] = latest.stored_common_usage_per_head
-        context["stored_maintenance_fee"] = latest.stored_maintenance_fee
         context["stored_head_count"] = latest.stored_head_count
-        context["maintenance_fee_note"] = latest.maintenance_fee_note
         context["multiply_by_head_count"] = latest.stored_multiply_by_head_count
 
     if request.htmx:
@@ -564,7 +663,6 @@ def create_electricity_billing(request, *args, **kwargs):
 
     # Recompute final bill server-side
     electricity_usage_diff = record.current_usage - record.previous_usage
-    maintenance_fee = record.stored_maintenance_fee or 0
     cost_per_electricity_usage = record.stored_cost_per_electricity_usage or 0
     common_usage_per_head = record.stored_common_usage_per_head or 0
     head_count = record.stored_head_count or 0
@@ -573,8 +671,7 @@ def create_electricity_billing(request, *args, **kwargs):
 
     # Calculate final bill
     final_bill = (
-        maintenance_fee 
-        + (electricity_usage_diff * cost_per_electricity_usage) 
+        (electricity_usage_diff * cost_per_electricity_usage) 
         + (common_usage_per_head * head_count if multiply_by_head_count else common_usage_per_head)
         + (fixed_water_fee * head_count if multiply_by_head_count else fixed_water_fee)
     )
@@ -585,4 +682,84 @@ def create_electricity_billing(request, *args, **kwargs):
     response["HX-Trigger"] = json.dumps({
         "toast": {"type": "success", "message": "Electricity billing created successfully."}
     })
+    return response
+
+
+def download_electricity_billings_template(request, *args, **kwargs):
+    if request.method != 'GET':
+        return HttpResponse(status=400)
+    
+    tenant_groups = TenantGroup.objects.filter(is_active=True)
+    
+    # downloadable excel file with following rows:
+    # tenant_group_id, tenant_group_name, property_and_space, 
+    # start_date, end_date, previous_usage, current_usage, 
+    # multiply_by_head_count, head_count, cost_per_electricity_usage, 
+    # common_usage_per_head, fixed_water_fee
+    columns = [
+        'tenant_group_id', 'tenant_group_name', 'property_and_space',
+        'start_date', 'end_date', 'previous_usage', 'current_usage',
+        'multiply_by_head_count', 'head_count', 'cost_per_electricity_usage', 
+        'common_usage_per_head', 'fixed_water_fee'
+    ]
+
+    placeholder_row = {
+        'tenant_group_id': '(Do not edit)',
+        'tenant_group_name': '(Do not edit)',
+        'property_and_space': '(Do not edit)',
+        'start_date': 'YYYY-MM-DD (e.g. 2025-10-01)',
+        'end_date': 'YYYY-MM-DD (e.g. 2025-10-31)',
+        'previous_usage': '50',
+        'current_usage': '55',
+        'multiply_by_head_count': 'TRUE/FALSE',
+        'head_count': '2',
+        'cost_per_electricity_usage': '20',
+        'common_usage_per_head': '300',
+        'fixed_water_fee': '300'
+    }
+
+    data = [placeholder_row]
+    for tenant_group in tenant_groups:
+        space = tenant_group.space
+        property = space.property
+        property_and_space = f"{property.name} - {space.name}"
+        
+        config = property.configuration
+        if config.billing_type != 'electricity':
+            continue
+        cost_per_electricity_usage = config.cost_per_electricity_usage
+        common_usage_per_head = config.common_usage_per_head
+        fixed_water_fee = config.fixed_water_fee
+        head_count = tenant_group.tenants.count()
+
+        latest_billing = tenant_group.electricity_consumption_records.order_by('-end_date').first()
+        start_date = latest_billing.end_date.strftime("%Y-%m-%d")
+        end_date = (latest_billing.end_date + relativedelta(months=1)).strftime("%Y-%m-%d")
+        previous_usage = latest_billing.previous_usage
+        current_usage = latest_billing.current_usage
+        multiply_by_head_count = True
+
+        data.append({
+            'tenant_group_id': tenant_group.id,
+            'tenant_group_name': tenant_group.name,
+            'property_and_space': property_and_space,
+            'start_date': start_date,
+            'end_date': end_date,
+            'previous_usage': previous_usage,
+            'current_usage': current_usage,
+            'multiply_by_head_count': multiply_by_head_count,
+            'head_count': head_count,
+            'cost_per_electricity_usage': cost_per_electricity_usage,
+            'common_usage_per_head': common_usage_per_head,
+            'fixed_water_fee': fixed_water_fee
+        })
+
+    df = pd.DataFrame(data)
+    
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="electricity_billings_template.xlsx"'
+    df.to_excel(response, index=False, engine='openpyxl')
+
     return response

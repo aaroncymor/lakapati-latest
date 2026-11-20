@@ -47,10 +47,8 @@ class ElectricityConsumptionRecordForm(forms.ModelForm):
             "current_usage",
             "stored_multiply_by_head_count",
             "stored_head_count",
-            "stored_maintenance_fee",
             "stored_cost_per_electricity_usage",
             "stored_common_usage_per_head",
-            "stored_fixed_water_fee",
-            "maintenance_fee_note",
+            "stored_fixed_water_fee"
         ]
 

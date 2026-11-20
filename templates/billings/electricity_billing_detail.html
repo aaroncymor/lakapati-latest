@@ -130,7 +130,8 @@
             </p>
         </div>
         <div class="flex flex-row gap-2 justify-between">
-            {% if electricity_consumption.multiply_by_head_count and electricity_consumption.stored_head_count > 1 %}
+            {% if electricity_consumption.stored_multiply_by_head_count %}
+            {% if electricity_consumption.stored_head_count > 1 %}
             <p>
                 <span class="inline">Common Usage x Head Count</span>
             </p>
@@ -143,15 +144,17 @@
             </p>
             {% else %}
             <p>
-                <span class="inline">Common Usage</span>
+                <span class="inline">Common Usage & Maintenance</span>
             </p>
             <p>
                 <span class="inline">{{ electricity_consumption.calculated_common_usage_per_head|floatformat:0 }}</span>
             </p>
             {% endif %}
+            {% endif %}
         </div>
         <div class="flex flex-row gap-2 justify-between">
-            {% if electricity_consumption.multiply_by_head_count and electricity_consumption.stored_head_count > 1 %}
+            {% if electricity_consumption.stored_multiply_by_head_count %}
+            {% if electricity_consumption.stored_head_count > 1 %}
             <p>
                 <span class="inline">Water Fee x Head Count</span>
             </p>
@@ -170,14 +173,7 @@
                 <span class="inline">{{ electricity_consumption.calculated_fixed_water_fee|floatformat:0 }}</span>
             </p>
             {% endif %}
-        </div>
-        <div class="flex flex-row gap-2 justify-between">
-            <p>
-                <span class="inline">Maintenance and Admin Fee</span>
-            </p>
-            <p>
-                <span class="inline">{{ electricity_consumption.maintenance_fee }}</span>
-            </p>
+            {% endif %}
         </div>
         <div class="divider divider-neutral"></div>
         <div class="flex flex-row gap-2 justify-between">

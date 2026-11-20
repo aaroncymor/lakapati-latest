@@ -144,7 +144,7 @@
         <div class="flex flex-row gap-2">
             {% if billing.stored_multiply_by_head_count %}
             <p class="text-sm opacity-60">
-                <span class="inline w-32">Fixed Water Fee x Head Count:</span>
+                <span class="inline w-32">Water Fee x Head Count:</span>
                 <span class="font-semibold">{{ billing.stored_fixed_water_fee }}</span>
                 <span>x</span>
                 <span class="font-semibold">{{ billing.stored_head_count }}</span>
@@ -153,16 +153,10 @@
             </p>
             {% else %}
             <p class="text-sm opacity-60">
-                <span class="inline w-32">Fixed Water Fee:</span>
+                <span class="inline w-32">Water Fee:</span>
                 <span class="font-semibold">{{ billing.stored_fixed_water_fee }}</span>
             </p>
             {% endif %}
-        </div>
-        <div class="flex flex-row gap-2">
-            <p class="text-sm opacity-60">
-                <span class="inline w-32">Maintenance Fee:</span>
-                <span class="font-semibold">{{ billing.stored_maintenance_fee }}</span>
-            </p>
         </div>
         <div class="flex flex-row gap-2">
             <p class="text-sm opacity-60 text-yellow-500 font-bold">

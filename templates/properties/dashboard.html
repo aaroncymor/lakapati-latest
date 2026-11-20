@@ -19,7 +19,9 @@
       <button class="btn bg-green-400 cursor-pointer"
         onclick="document.getElementById('importBillingFormModal').showModal()">Import
         Billings</button>
-      <a href="{% url 'download_water_billings_template' %}" class="btn bg-blue-600">Download Template</a>
+      <a href="{% url 'download_water_billings_template' %}" class="btn bg-blue-600">Water Billing Template</a>
+      <a href="{% url 'download_electricity_billings_template' %}" class="btn bg-amber-600">Electricity Billing
+        Template</a>
     </div>
   </div>
   {% include 'properties/partials/table.html' %}
@@ -72,7 +74,6 @@
       get finalAmount() {
         return (
           parseFloat(this.electricityUsageDiffAndCostPerElectricityUsageProduct) +
-          parseFloat(this.maintenanceFee) +
           parseFloat(this.commonUsagePerHeadFinal) +
           parseFloat(this.fixedWaterFeeFinal)
         ).toFixed(0);

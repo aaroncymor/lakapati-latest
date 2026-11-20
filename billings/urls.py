@@ -24,14 +24,14 @@ urlpatterns = [
         name="create_water_billing"
     ),
     path(
-        'import-water-billings',
-        views.import_water_billings,
-        name="import_water_billings"
-    ),
-    path(
         'download-water-billings-template',
         views.download_water_billings_template,
         name="download_water_billings_template"
+    ),
+    path(
+        'download-electricity-billings-template',
+        views.download_electricity_billings_template,
+        name="download_electricity_billings_template"
     ),
     path(
         '<int:tenant_group_id>/latest-electricity-billing',
@@ -48,4 +48,8 @@ urlpatterns = [
         views.detail_electricity_billing,
         name="electricity_billing_detail"
     ),
-]
+    path(
+        'import-billings',
+        views.import_billings,
+        name="import_billings"
+    ),]

@@ -8,8 +8,6 @@
         prevTotal: {{ previous_total|default:0 }},
         currTotal: {{ current_total|default:0 }},
         costPerElectricityUsage: {{ cost_per_electricity_usage|default:0 }},
-        maintenanceFee: {{ maintenance_fee|default:0 }},
-        maintenanceFeeNote: '{{ maintenance_fee_note|default:''|escapejs }}',
         commonUsagePerHead: {{ common_usage_per_head|default:0 }},
         fixedWaterFee: {{ fixed_water_fee|default:0 }},
         multiplyByHeadCount: {{ multiply_by_head_count|yesno:'true,false' }},
@@ -144,16 +142,6 @@
                 </label>
             </fieldset>
 
-            <fieldset class="fieldset">
-                <label class="floating-label flex flex-col">
-                    <input type="number" name="stored_maintenance_fee" class="input validator"
-                        placeholder="Maintenance & Admin Fee" min="0" x-model.number="maintenanceFee"
-                        style="width: inherit;" required />
-                    <span>Maintenance & Admin Fee</span>
-                    <p class="validator-hint">Must not be below zero</p>
-                </label>
-            </fieldset>
-
             <div class="electricity_billing_modal summary mt-7">
                 <div class="flex flex-row">
                     <p>
@@ -182,12 +170,6 @@
                             <span x-text="commonUsagePerHead"></span>
                         </p>
                     </template>
-                </div>
-                <div class="flex flex-row">
-                    <p>
-                        <span>Maintenance & Admin Fee: </span>
-                        <span x-text="maintenanceFee"></span>
-                    </p>
                 </div>
                 <div class="flex flex-row">
                     <template x-if="multiplyByHeadCount === true">

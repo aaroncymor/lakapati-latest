@@ -1,7 +1,7 @@
 <dialog class="modal" id="importBillingFormModal">
   <div class="modal-box">
-    <form id="importBillingForm" hx-post="{% url 'import_water_billings' %}" hx-target="#uploadResult"
-      hx-swap="innerHTML" hx-encoding="multipart/form-data" hx-indicator="#uploadSpinner"
+    <form id="importBillingForm" hx-post="{% url 'import_billings' %}" hx-target="#uploadResult" hx-swap="innerHTML"
+      hx-encoding="multipart/form-data" hx-indicator="#uploadSpinner"
       class="relative border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50 hover:bg-slate-100 hover:border-indigo-500 transition-all cursor-pointer group"
       onclick="document.getElementById('fileInput').click()">
       {% csrf_token %}
