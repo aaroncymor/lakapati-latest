@@ -117,16 +117,16 @@
                 <span class="inline">(FIX RATE)</span>
                 {% else %}
                 <span class="inline">
-                    {{ water_consumption.water_usage_diff}}
+                    {{ water_consumption.water_usage_diff|floatformat:2 }}
                 </span>
                 <span class="inline">x</span>
                 <span class="inline">
-                    {{ water_consumption.stored_cost_per_h2o_usage }}
+                    {{ water_consumption.stored_cost_per_h2o_usage|floatformat:2 }}
                 </span>
                 <span class="inline">=</span>
                 {% endif %}
                 <span class="inline">
-                    {{ water_consumption.calculated_cost_per_water_usage }}
+                    {{ water_consumption.calculated_cost_per_water_usage|floatformat:2 }}
                 </span>
             </p>
         </div>
