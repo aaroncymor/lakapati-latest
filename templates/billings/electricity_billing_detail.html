@@ -142,6 +142,7 @@
                 <span class="inline">=</span>
                 <span class="inline">{{ electricity_consumption.calculated_common_usage_per_head|floatformat:0 }}</span>
             </p>
+            {% endif %}
             {% else %}
             <p>
                 <span class="inline">Common Usage & Maintenance</span>
@@ -149,7 +150,6 @@
             <p>
                 <span class="inline">{{ electricity_consumption.calculated_common_usage_per_head|floatformat:0 }}</span>
             </p>
-            {% endif %}
             {% endif %}
         </div>
         <div class="flex flex-row gap-2 justify-between">
@@ -165,6 +165,7 @@
                 <span class="inline">=</span>
                 <span class="inline">{{ electricity_consumption.calculated_fixed_water_fee|floatformat:0 }}</span>
             </p>
+            {% endif %}
             {% else %}
             <p>
                 <span class="inline">Water Fee</span>
@@ -172,7 +173,6 @@
             <p>
                 <span class="inline">{{ electricity_consumption.calculated_fixed_water_fee|floatformat:0 }}</span>
             </p>
-            {% endif %}
             {% endif %}
         </div>
         <div class="divider divider-neutral"></div>
