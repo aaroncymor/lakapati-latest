@@ -32,6 +32,14 @@ class WaterConsumptionRecord(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     @property
+    def is_fix_rate_applicable(self):
+        usage_diff = self.current_usage - self.previous_usage
+        return (
+            self.apply_fix_rate and
+            usage_diff <= self.stored_h2o_usage_cost_threshold
+        )
+
+    @property
     def water_usage_diff(self):
         return self.current_usage - self.previous_usage
 
@@ -75,10 +83,14 @@ class WaterConsumptionRecord(models.Model):
 
     @property
     def calculated_cost_per_water_usage(self):
-        if self.apply_fix_rate:
+        usage_diff = self.current_usage - self.previous_usage
+        if (
+            self.stored_fix_rate 
+            and self.apply_fix_rate
+            and usage_diff <= self.stored_h2o_usage_cost_threshold
+        ):
             return self.stored_fix_rate
 
-        usage_diff = self.current_usage - self.previous_usage
         return (self.stored_cost_per_h2o_usage * usage_diff)
 
     class Meta:

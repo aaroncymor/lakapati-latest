@@ -113,7 +113,7 @@
                 <span class="inline">Cost Per H2O Usage (Cubic Meter) X Reading Consumption</span>
             </p>
             <p>
-                {% if water_consumption.apply_fix_rate %}
+                {% if water_consumption.is_fix_rate_applicable %}
                 <span class="inline">(FIX RATE)</span>
                 {% else %}
                 <span class="inline">

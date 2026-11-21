@@ -59,8 +59,12 @@
                     </span>
             </p>
             <p class="text-sm opacity-60">
-                <span class="font-semibold">
-                    {{ billing.calculated_cost_per_water_usage }} + {{ billing.stored_maintenance_fee }}
+                <span class="inline font-semibold">
+                    {{ billing.calculated_cost_per_water_usage|floatformat:2 }}
+                </span>
+                <span class="inline font-semibold">+</span>
+                <span class="inline font-semibold">
+                    {{ billing.stored_maintenance_fee|floatformat:2 }}
                 </span>
             </p>
         </div>
