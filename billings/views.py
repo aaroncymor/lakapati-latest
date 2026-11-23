@@ -55,18 +55,25 @@ def import_water_billings(uploaded_file):
     # Validate date range
     _validate_date_range(df)
 
+    # group by property_id except 1st row (placeholder/guidance row)
+    df = df.iloc[1:]
+    grouped = df.groupby('property_id')
+
     # get previous total and current total by sum of previous_usage and current_usage
     # must be same start_date and end_date for all rows
     # (cast to float: pandas .sum() returns a numpy scalar that Decimal() rejects)
-    previous_total = float(df.iloc[1:]['previous_usage'].sum())
-    current_total = float(df.iloc[1:]['current_usage'].sum())
+    total_mapping = {}
+    for property_id, group in grouped:
+        previous_total = float(group['previous_usage'].sum())
+        current_total = float(group['current_usage'].sum())
+        total_mapping[property_id.strip()] = {
+            'previous_total': previous_total,
+            'current_total': current_total
+        }
+
     
-    # loop through the rows, skipping the header (index 0) which is the placeholder row
+    # loop through the rows
     for idx, row in df.iterrows():
-        # Skip the first row (placeholder/guidance row from template)
-        if idx == 0:
-            continue
-        
         # Skip rows where tenant_group_id contains placeholder text
         tenant_group_id = str(row['tenant_group_id']).strip()
         if tenant_group_id == '(Do not edit)' or not tenant_group_id:
@@ -98,8 +105,8 @@ def import_water_billings(uploaded_file):
                 tenant_group_id=tenant_group_id,
                 start_date=row['start_date'],
                 end_date=row['end_date'],
-                previous_total=previous_total,
-                current_total=current_total,
+                previous_total=total_mapping[row['property_id']]['previous_total'],
+                current_total=total_mapping[row['property_id']]['current_total'],
                 previous_usage=float(row['previous_usage']),
                 current_usage=float(row['current_usage']),
                 apply_fix_rate=apply_fix_rate,
@@ -123,17 +130,24 @@ def import_electricity_billings(uploaded_file):
     # Validate date range
     _validate_date_range(df)
     
+     # group by property_id except 1st row (placeholder/guidance row)
+    df = df.iloc[1:]
+    grouped = df.groupby('property_id')
+
     # get previous total and current total by sum of previous_usage and current_usage
     # must be same start_date and end_date for all rows
-    previous_total = float(df.iloc[1:]['previous_usage'].sum())
-    current_total = float(df.iloc[1:]['current_usage'].sum())
+    # (cast to float: pandas .sum() returns a numpy scalar that Decimal() rejects)
+    total_mapping = {}
+    for property_id, group in grouped:
+        previous_total = float(group['previous_usage'].sum())
+        current_total = float(group['current_usage'].sum())
+        total_mapping[property_id.strip()] = {
+            'previous_total': previous_total,
+            'current_total': current_total
+        }
     
-    # loop through the rows, skipping the header (index 0) which is the placeholder row
+    # loop through the rows
     for idx, row in df.iterrows():
-        # Skip the first row (placeholder/guidance row from template)
-        if idx == 0:
-            continue
-
         tenant_group_id = row.get("tenant_group_id")
         if not tenant_group_id:
             continue
@@ -168,8 +182,8 @@ def import_electricity_billings(uploaded_file):
                 tenant_group_id=tenant_group_id,
                 start_date=row['start_date'],
                 end_date=row['end_date'],
-                previous_total=float(previous_total),
-                current_total=float(current_total),
+                previous_total=total_mapping[tenant_group_id]['previous_total'],
+                current_total=total_mapping[tenant_group_id]['current_total'],
                 previous_usage=float(row['previous_usage']),
                 current_usage=float(row['current_usage']),
                 stored_head_count=head_count,
@@ -435,7 +449,7 @@ def download_water_billings_template(request, *args, **kwargs):
     # current_usage, apply_fix_rate, fix_rate, h2o_usage_cost_threshold, 
     # cost_per_h2o_usage, maintenance_fee, maintenance_fee_note
     columns = [
-        'tenant_group_id', 'tenant_group_name', 'property_and_space',
+        'tenant_group_id', 'tenant_group_name', 'property_and_space', 'property_id',
         'start_date', 'end_date', 'previous_total', 'current_total',
         'previous_usage', 'current_usage', 'apply_fix_rate', 'fix_rate',
         'h2o_usage_cost_threshold', 'cost_per_h2o_usage', 'maintenance_fee',
@@ -447,6 +461,7 @@ def download_water_billings_template(request, *args, **kwargs):
         'tenant_group_id': '(Do not edit)',
         'tenant_group_name': '(Do not edit)',
         'property_and_space': '(Do not edit)',
+        'property_id': '(Do not edit)',
         'start_date': 'YYYY-MM-DD (e.g. 2025-10-01)',
         'end_date': 'YYYY-MM-DD (e.g. 2025-10-31)',
         'previous_usage': '50',
@@ -497,6 +512,7 @@ def download_water_billings_template(request, *args, **kwargs):
             'tenant_group_id': str(tenant_group.id),
             'tenant_group_name': tenant_group.name,
             'property_and_space': property_and_space,
+            'property_id': str(property.id),
             'start_date': start_date,
             'end_date': end_date,
             'previous_usage': previous_usage,
@@ -740,12 +756,12 @@ def download_electricity_billings_template(request, *args, **kwargs):
     tenant_groups = TenantGroup.objects.filter(is_active=True)
     
     # downloadable excel file with following rows:
-    # tenant_group_id, tenant_group_name, property_and_space, 
+    # tenant_group_id, tenant_group_name, property_and_space, property_id,
     # start_date, end_date, previous_usage, current_usage, 
     # multiply_by_head_count, head_count, cost_per_electricity_usage, 
     # common_usage_per_head, fixed_water_fee
     columns = [
-        'tenant_group_id', 'tenant_group_name', 'property_and_space',
+        'tenant_group_id', 'tenant_group_name', 'property_and_space', 'property_id',
         'start_date', 'end_date', 'previous_usage', 'current_usage',
         'multiply_by_head_count', 'head_count', 'cost_per_electricity_usage', 
         'common_usage_per_head', 'fixed_water_fee'
@@ -755,6 +771,7 @@ def download_electricity_billings_template(request, *args, **kwargs):
         'tenant_group_id': '(Do not edit)',
         'tenant_group_name': '(Do not edit)',
         'property_and_space': '(Do not edit)',
+        'property_id': '(Do not edit)',
         'start_date': 'YYYY-MM-DD (e.g. 2025-10-01)',
         'end_date': 'YYYY-MM-DD (e.g. 2025-10-31)',
         'previous_usage': '50',
@@ -791,6 +808,7 @@ def download_electricity_billings_template(request, *args, **kwargs):
             'tenant_group_id': tenant_group.id,
             'tenant_group_name': tenant_group.name,
             'property_and_space': property_and_space,
+            'property_id': property.id,
             'start_date': start_date,
             'end_date': end_date,
             'previous_usage': previous_usage,
