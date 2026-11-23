@@ -4,7 +4,7 @@ The `.billing-invoice-capture` element is what html2canvas renders, on the
 single detail page and in the bulk download page.
 {% endcomment %}
 <div class="billing-invoice-capture max-w-4xl mx-auto bg-white !text-black font-mono p-8"
-    data-filename="water-billing-{{ consumption.id }}.png">
+    data-filename="{{ consumption.billing_filename }}.png">
     <h2 class="text-center text-2xl mb-2">Water Billing</h2>
     <p class="text-center mb-4">
         <span class="inline font-bold uppercase">Period Covered:</span>
