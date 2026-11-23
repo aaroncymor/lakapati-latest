@@ -52,4 +52,15 @@ urlpatterns = [
         'import-billings',
         views.import_billings,
         name="import_billings"
-    ),]
+    ),
+    path(
+        'download-water-invoices',
+        views.download_water_invoices,
+        name="download_water_invoices"
+    ),
+    path(
+        'download-electricity-invoices',
+        views.download_electricity_invoices,
+        name="download_electricity_invoices"
+    ),
+]

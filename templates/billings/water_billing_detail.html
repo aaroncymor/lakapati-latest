@@ -5,158 +5,23 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.11/dist/html2canvas-pro.min.js"
     integrity="sha384-Wm+alMbg1fxSJBbLMXKBb1ZfoWBd0FwJml5aEbKolDB41cMjTfek0cLKgCku6MAF" crossorigin="anonymous"
     referrerpolicy="no-referrer"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.1/jspdf.umd.min.js"
-    integrity="sha384-ytX5osgYad9GPnagB0k+CxKTir/bsE7AfpzvCnQ7owfeWuDd+2l2y0PSIqRK+z/2" crossorigin="anonymous"
-    referrerpolicy="no-referrer"></script>
 {% endblock %}
 
 {% block content %}
 <div class="mb-4">
-    <button id="download-pdf-btn" class="btn btn-primary">Download PDF</button>
+    <button id="download-image-btn" class="btn btn-primary">Download Image</button>
 </div>
-<div class="mx-8 mt-8 px-8 py-8 bg-white !text-black font-mono">
-    <div id="water-billing-detail" class="max-w-4xl mx-auto" x-data="{
-}">
-        <h2 class="text-center text-2xl mb-2">Water Billing</h2>
-        <p class="text-center mb-4">
-            <span class="inline font-bold uppercase">Period Covered:</span>
-            <span class="inline">
-                {{ water_consumption.start_date|date:"M j" }} - {{ water_consumption.end_date|date:"M j Y" }}
-            </span>
-        </p>
-        <!-- Content will be loaded here -->
-        <p>
-            <span class="inline font-bold">Invoice Number:</span>
-            <span class="inline">
-                {{ water_consumption.id }}
-            </span>
-        </p>
-        <div class="flex flex-row justify-between">
-            <p>
-                <span class="inline font-bold">Billed To:</span>
-                <span class="inline">
-                    {{ water_consumption.tenant_group.primary.first_name }}
-                </span>
-                <span class="inline">
-                    {{ water_consumption.tenant_group.primary.last_name }}
-                </span>
-            </p>
-            <p>
-                <span class="inline font-bold">Unit / Room:</span>
-                <span class="inline">
-                    {{ water_consumption.tenant_group.space.name }}
-                </span>
-            </p>
-        </div>
-        <div class="flex flex-row">
-            <p>
-                <span class="inline font-bold">From:</span>
-                <span class="inline">
-                    {{ water_consumption.tenant_group.space.property.name }}
-                </span>
-            </p>
-        </div>
-        <div class="flex flex-row">
-            <p class="block">
-                <span class="inline">
-                    {{ water_consumption.tenant_group.space.property.address }}
-                </span>
-            </p>
-        </div>
-        <div class="flex flex-row">
-            <table class="w-full">
-                <thead class="text-left">
-                    <tr>
-                        <th class="font-bold">Prev Total Water Usage:</th>
-                        <th class="font-bold">Curr Total Water Usage:</th>
-                        <th class="font-bold">Total Water Usage Diff:</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>{{ water_consumption.previous_total }}</td>
-                        <td>{{ water_consumption.current_total }}</td>
-                        <td>{{ water_consumption.total_water_usage_diff }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="flex flex-row gap-2">
-            <table class="w-full">
-                <thead class="text-left">
-                    <tr>
-                        <th class="font-bold">Prev Water Usage:</th>
-                        <th class="font-bold">Curr Water Usage:</th>
-                        <th class="font-bold">Water Usage Diff:</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>{{ water_consumption.previous_usage }}</td>
-                        <td>{{ water_consumption.current_usage }}</td>
-                        <td>{{ water_consumption.water_usage_diff }}</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="flex flex-row gap-2 justify-between mt-4">
-            <p>
-                <span class="inline font-bold">Description</span>
-            </p>
-            <p>
-                <span class="inline font-bold">Amount</span>
-            </p>
-        </div>
-        <div class="divider divider-neutral"></div>
-        <div class="flex flex-row gap-2 justify-between">
-            <p>
-                <span class="inline">Cost Per H2O Usage (Cubic Meter) X Reading Consumption</span>
-            </p>
-            <p>
-                {% if water_consumption.is_fix_rate_applicable %}
-                <span class="inline">(FIX RATE)</span>
-                {% else %}
-                <span class="inline">
-                    {{ water_consumption.water_usage_diff|floatformat:2 }}
-                </span>
-                <span class="inline">x</span>
-                <span class="inline">
-                    {{ water_consumption.stored_cost_per_h2o_usage|floatformat:2 }}
-                </span>
-                <span class="inline">=</span>
-                {% endif %}
-                <span class="inline">
-                    {{ water_consumption.calculated_cost_per_water_usage|floatformat:2 }}
-                </span>
-            </p>
-        </div>
-        <div class="flex flex-row gap-2 justify-between">
-            <p>
-                <span class="inline">Maintenance and Admin Fee</span>
-            </p>
-            <p>
-                <span class="inline">{{ water_consumption.maintenance_fee|floatformat:0 }}</span>
-            </p>
-        </div>
-        <div class="divider divider-neutral"></div>
-        <div class="flex flex-row gap-2 justify-between">
-            <p>
-                <span class="inline font-bold">Total</span>
-            </p>
-            <p>
-                <span class="inline font-bold">{{ water_consumption.stored_final_bill }}</span>
-            </p>
-        </div>
-    </div>
+<div class="mx-8 mt-8">
+    {% include 'billings/partials/water_invoice.html' with consumption=water_consumption %}
 </div>
 {% endblock %}
 
 {% block xtra_script %}
 <script>
-    const downloadPdfBtn = document.getElementById('download-pdf-btn');
-    downloadPdfBtn.addEventListener('click', async function () {
-        const element = document.getElementById('water-billing-detail');
-        downloadPdfBtn.disabled = true;
+    const downloadImageBtn = document.getElementById('download-image-btn');
+    downloadImageBtn.addEventListener('click', async function () {
+        const element = document.querySelector('.billing-invoice-capture');
+        downloadImageBtn.disabled = true;
         try {
             // html2canvas-pro understands oklch(), so no color neutralizing needed.
             const canvas = await html2canvas(element, {
@@ -164,29 +29,14 @@
                 backgroundColor: '#ffffff',
                 useCORS: true,
             });
-            const imgData = canvas.toDataURL('image/jpeg', 0.98);
-
-            // Size the PDF page to the invoice content (plus a small margin) so the
-            // output is "cropped" to the invoice instead of a fixed A4 sheet.
-            const margin = 8; // mm
-            const pxToMm = 25.4 / 96; // CSS pixels -> mm
-            const imgWidth = (canvas.width / 2) * pxToMm;  // divide by scale (2)
-            const imgHeight = (canvas.height / 2) * pxToMm;
-            const pageWidth = imgWidth + margin * 2;
-            const pageHeight = imgHeight + margin * 2;
-
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                unit: 'mm',
-                orientation: pageWidth >= pageHeight ? 'landscape' : 'portrait',
-                format: [pageWidth, pageHeight],
-            });
-            pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
-            pdf.save('water-billing-{{ water_consumption.id }}.pdf');
+            const link = document.createElement('a');
+            link.download = '{{ water_consumption.billing_filename }}.png'
+            link.href = canvas.toDataURL('image/png');
+            link.click();
         } catch (err) {
-            console.error('PDF generation failed:', err);
+            console.error('Image generation failed:', err);
         } finally {
-            downloadPdfBtn.disabled = false;
+            downloadImageBtn.disabled = false;
         }
     });
 </script>

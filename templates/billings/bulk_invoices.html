@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block xtra_head %}
+<script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.11/dist/html2canvas-pro.min.js"
+    integrity="sha384-Wm+alMbg1fxSJBbLMXKBb1ZfoWBd0FwJml5aEbKolDB41cMjTfek0cLKgCku6MAF" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"
+    integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col items-center justify-center gap-4 py-16 text-center">
+    <h2 class="text-2xl font-bold">{{ title }}</h2>
+    {% if invoices %}
+    <p id="bulk-status" class="opacity-70">Preparing {{ invoices|length }} invoice image{{ invoices|length|pluralize }}…</p>
+    <progress id="bulk-progress" class="progress progress-primary w-80" value="0" max="{{ invoices|length }}"></progress>
+    <a href="{% url 'tenant_groups_list' %}" class="btn btn-ghost btn-sm">Back to dashboard</a>
+    {% else %}
+    <p class="opacity-70">No {{ billing_type }} invoices found to download.</p>
+    <a href="{% url 'tenant_groups_list' %}" class="btn btn-primary btn-sm">Back to dashboard</a>
+    {% endif %}
+</div>
+
+<!-- Rendered off-screen so html2canvas can capture each invoice at natural size. -->
+<div style="position:absolute; left:-10000px; top:0; width:960px;">
+    {% for consumption in invoices %}
+    {% if billing_type == 'electricity' %}
+    {% include 'billings/partials/electricity_invoice.html' with consumption=consumption %}
+    {% else %}
+    {% include 'billings/partials/water_invoice.html' with consumption=consumption %}
+    {% endif %}
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block xtra_script %}
+<script>
+    (async function () {
+        const nodes = Array.from(document.querySelectorAll('.billing-invoice-capture'));
+        if (nodes.length === 0) return;
+
+        const statusEl = document.getElementById('bulk-status');
+        const progressEl = document.getElementById('bulk-progress');
+        const zip = new JSZip();
+
+        const toBlob = (canvas) => new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+
+        try {
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i];
+                const canvas = await html2canvas(node, {
+                    scale: 2,
+                    backgroundColor: '#ffffff',
+                    useCORS: true,
+                });
+                const blob = await toBlob(canvas);
+                const name = node.dataset.filename || `invoice-${i + 1}.png`;
+                zip.file(name, blob);
+                if (progressEl) progressEl.value = i + 1;
+                if (statusEl) statusEl.textContent = `Rendered ${i + 1} of ${nodes.length}…`;
+            }
+
+            if (statusEl) statusEl.textContent = 'Compressing…';
+            const content = await zip.generateAsync({ type: 'blob' });
+            const link = document.createElement('a');
+            link.download = '{{ zip_filename }}';
+            link.href = URL.createObjectURL(content);
+            link.click();
+            URL.revokeObjectURL(link.href);
+            if (statusEl) statusEl.textContent = `Done — downloaded ${nodes.length} invoice image${nodes.length === 1 ? '' : 's'}.`;
+        } catch (err) {
+            console.error('Bulk invoice download failed:', err);
+            if (statusEl) statusEl.textContent = 'Something went wrong while generating the images. Check the console.';
+        }
+    })();
+</script>
+{% endblock %}

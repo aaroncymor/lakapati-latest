@@ -93,6 +93,11 @@ class WaterConsumptionRecord(models.Model):
 
         return (self.stored_cost_per_h2o_usage * usage_diff)
 
+    @property
+    def billing_filename(self):
+        name = self.tenant_group.name.replace(" ", "_").lower()
+        return f'water-billing-{name}_{self.start_date.strftime("%Y%m%d")}-{self.end_date.strftime("%Y%m%d")}'
+
     class Meta:
         verbose_name_plural = "Water Consumption Records"
 
@@ -232,4 +237,7 @@ class ElectricityConsumptionRecord(models.Model):
         )
         return final_bill
         
-    
+    @property
+    def billing_filename(self):
+        name = self.tenant_group.name.replace(" ", "_").lower()
+        return f'electricity-billing-{name}_{self.start_date.strftime("%Y%m%d")}-{self.end_date.strftime("%Y%m%d")}'

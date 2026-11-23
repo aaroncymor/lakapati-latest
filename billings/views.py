@@ -636,6 +636,54 @@ def detail_electricity_billing(request, pk, *args, **kwargs):
     return HttpResponse(status=400)
 
 
+def _latest_invoices_for_billing_type(billing_type):
+    """
+    Return the latest consumption record for every active tenant group whose
+    configured billing type matches `billing_type` (skipping groups with no
+    record yet). Used to bulk-render invoice images.
+    """
+    invoices = []
+    tenant_groups = TenantGroup.objects.filter(is_active=True)
+    for tenant_group in tenant_groups:
+        try:
+            if tenant_group.billing_type != billing_type:
+                continue
+        except AttributeError:
+            # Tenant group without a property configuration; skip it.
+            continue
+
+        if billing_type == "electricity":
+            record = tenant_group.electricity_consumption_records.order_by("-end_date").first()
+        else:
+            record = tenant_group.water_consumption_records.order_by("-created_at").first()
+
+        if record:
+            invoices.append(record)
+    return invoices
+
+
+def download_water_invoices(request, *args, **kwargs):
+    if request.method != "GET":
+        return HttpResponse(status=400)
+    return render(request, "billings/bulk_invoices.html", {
+        "invoices": _latest_invoices_for_billing_type("water"),
+        "billing_type": "water",
+        "title": "Download Water Invoices",
+        "zip_filename": "water-invoices.zip",
+    })
+
+
+def download_electricity_invoices(request, *args, **kwargs):
+    if request.method != "GET":
+        return HttpResponse(status=400)
+    return render(request, "billings/bulk_invoices.html", {
+        "invoices": _latest_invoices_for_billing_type("electricity"),
+        "billing_type": "electricity",
+        "title": "Download Electricity Invoices",
+        "zip_filename": "electricity-invoices.zip",
+    })
+
+
 def create_electricity_billing(request, *args, **kwargs):
     if request.method != "POST":
         return HttpResponse(status=405)

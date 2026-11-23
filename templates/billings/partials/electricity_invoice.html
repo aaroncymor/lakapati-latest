@@ -1,0 +1,154 @@
+{% comment %}
+Shared electricity invoice body. Expects `consumption` (an ElectricityConsumptionRecord).
+The `.billing-invoice-capture` element is what html2canvas renders.
+{% endcomment %}
+<div class="billing-invoice-capture max-w-4xl mx-auto bg-white !text-black font-mono p-8"
+    data-filename="electricity-billing-{{ consumption.id }}.png">
+    <h2 class="text-center text-2xl mb-2">Electricity, Water, &amp; Maintenance Billing</h2>
+    <p class="text-center mb-4">
+        <span class="inline font-bold uppercase">Period Covered:</span>
+        <span class="inline">
+            <span>{{ consumption.start_date|date:"M j" }}</span> -
+            <span>{{ consumption.end_date|date:"M j Y" }}</span>
+        </span>
+    </p>
+    <p>
+        <span class="inline font-bold">Invoice Number:</span>
+        <span class="inline">{{ consumption.id }}</span>
+    </p>
+    <div class="flex flex-row justify-between">
+        <p>
+            <span class="inline font-bold">Billed To:</span>
+            <span class="inline">{{ consumption.tenant_group.primary.first_name }}</span>
+            <span class="inline">{{ consumption.tenant_group.primary.last_name }}</span>
+        </p>
+        <p>
+            <span class="inline font-bold">Unit / Room:</span>
+            <span class="inline">{{ consumption.tenant_group.space.name }}</span>
+        </p>
+    </div>
+    <div class="flex flex-row">
+        <p>
+            <span class="inline font-bold">From:</span>
+            <span class="inline">{{ consumption.tenant_group.space.property.name }}</span>
+        </p>
+    </div>
+    <div class="flex flex-row">
+        <p class="block">
+            <span class="inline">{{ consumption.tenant_group.space.property.address }}</span>
+        </p>
+    </div>
+    <div class="flex flex-row gap-2">
+        <table class="w-full">
+            <thead class="text-left">
+                <tr>
+                    <th class="font-bold">Prev Electricity Total:</th>
+                    <th class="font-bold">Curr Electricity Total:</th>
+                    <th class="font-bold">Electricity Total Diff:</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ consumption.previous_total }}</td>
+                    <td>{{ consumption.current_total }}</td>
+                    <td>{{ consumption.total_electricity_usage_diff }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="flex flex-row gap-2">
+        <table class="w-full">
+            <thead class="text-left">
+                <tr>
+                    <th class="font-bold">Prev Electricity Usage:</th>
+                    <th class="font-bold">Curr Electricity Usage:</th>
+                    <th class="font-bold">Electricity Usage Diff:</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ consumption.previous_usage }}</td>
+                    <td>{{ consumption.current_usage }}</td>
+                    <td>{{ consumption.electricity_usage_diff }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="flex flex-row gap-2 justify-between mt-4">
+        <p>
+            <span class="inline font-bold">Description</span>
+        </p>
+        <p>
+            <span class="inline font-bold">Amount</span>
+        </p>
+    </div>
+    <div class="divider divider-neutral"></div>
+    <div class="flex flex-row gap-2 justify-between">
+        <p>
+            <span class="inline">Cost Per Usage (kW) X Reading Consumption</span>
+        </p>
+        <p>
+            <span class="inline">(FIX RATE)</span>
+            <span class="inline">{{ consumption.stored_cost_per_electricity_usage }}</span>
+            <span class="inline">x</span>
+            <span class="inline">{{ consumption.electricity_usage_diff }}</span>
+            <span class="inline">=</span>
+            <span class="inline">{{ consumption.calculated_cost_per_electricity_usage|floatformat:2 }}</span>
+        </p>
+    </div>
+    <div class="flex flex-row gap-2 justify-between">
+        {% if consumption.stored_multiply_by_head_count %}
+        {% if consumption.stored_head_count > 1 %}
+        <p>
+            <span class="inline">Common Usage x Head Count</span>
+        </p>
+        <p>
+            <span class="inline">{{ consumption.stored_common_usage_per_head|floatformat:0 }}</span>
+            <span class="inline">x</span>
+            <span class="inline">{{ consumption.stored_head_count }}</span>
+            <span class="inline">=</span>
+            <span class="inline">{{ consumption.calculated_common_usage_per_head|floatformat:0 }}</span>
+        </p>
+        {% endif %}
+        {% else %}
+        <p>
+            <span class="inline">Common Usage &amp; Maintenance</span>
+        </p>
+        <p>
+            <span class="inline">{{ consumption.calculated_common_usage_per_head|floatformat:0 }}</span>
+        </p>
+        {% endif %}
+    </div>
+    <div class="flex flex-row gap-2 justify-between">
+        {% if consumption.stored_multiply_by_head_count %}
+        {% if consumption.stored_head_count > 1 %}
+        <p>
+            <span class="inline">Water Fee x Head Count</span>
+        </p>
+        <p>
+            <span class="inline">{{ consumption.stored_fixed_water_fee|floatformat:0 }}</span>
+            <span class="inline">x</span>
+            <span class="inline">{{ consumption.stored_head_count }}</span>
+            <span class="inline">=</span>
+            <span class="inline">{{ consumption.calculated_fixed_water_fee|floatformat:0 }}</span>
+        </p>
+        {% endif %}
+        {% else %}
+        <p>
+            <span class="inline">Water Fee</span>
+        </p>
+        <p>
+            <span class="inline">{{ consumption.calculated_fixed_water_fee|floatformat:0 }}</span>
+        </p>
+        {% endif %}
+    </div>
+    <div class="divider divider-neutral"></div>
+    <div class="flex flex-row gap-2 justify-between">
+        <p>
+            <span class="inline font-bold">Total</span>
+        </p>
+        <p>
+            <span class="inline font-bold">{{ consumption.stored_final_bill }}</span>
+        </p>
+    </div>
+</div>
